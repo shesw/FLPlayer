@@ -1,0 +1,4 @@
+﻿<song_mp3_02>http://10.0.2.2:90/生生忘.mp3</>
+<song_lyc_02>http://10.0.2.2:90/ssw02.txt</>
+<song_bgs_02>http://10.0.2.2:90/ssw_bs_02.txt</>
+<song_img_02>http://10.0.2.2:90/生生忘.jpg</>

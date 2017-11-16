@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ViewFlipper
+        android:id="@+id/vf_ly_bs"
+        android:layout_gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="50dp"
+        android:layout_marginEnd="50dp"
+        android:layout_weight="14"
+        android:layout_marginTop="40dp">
+
+        <android.support.v7.widget.CardView
+            app:cardBackgroundColor="#8000"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <com.compassl.anji.songs_ssw.MyTextView
+                android:textColor="#fff"
+                android:id="@+id/tv_song_info"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="vertical"/>
+        </android.support.v7.widget.CardView>
+
+        <android.support.v7.widget.CardView
+            app:cardBackgroundColor="#8000"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <com.compassl.anji.songs_ssw.MyLrcView
+                android:id="@+id/lv_ly"
+                app:lrcCurrentTextColor="#fff"
+                app:lrcNormalTextColor="#aaa"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </android.support.v7.widget.CardView>
+
+        <android.support.v7.widget.CardView
+            app:cardBackgroundColor="#8000"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <com.compassl.anji.songs_ssw.MyTextView
+                android:textColor="#fff"
+                android:id="@+id/tv_bacground_story_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scrollbars="vertical"/>
+        </android.support.v7.widget.CardView>
+    </ViewFlipper>
+
+    <android.support.v7.widget.CardView
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        app:cardBackgroundColor="#5599dd11"
+        app:cardElevation="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:background="#50000000">
+            <TextView
+                android:id="@+id/tv_display_time_current"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:textSize="12sp"
+                android:layout_weight="1"
+                android:textColor="#fff"
+                android:layout_marginEnd="5dp" />
+            <SeekBar
+                android:id="@+id/sb_song_progress"
+                android:layout_width="0dp"
+                android:layout_height="10dp"
+                android:layout_weight="7"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:thumb="@null"
+                android:progressDrawable="@drawable/seekbar_style2"/>
+            <TextView
+                android:id="@+id/tv_display_time_total"
+                android:layout_marginStart="5dp"
+                android:gravity="center"
+                android:layout_gravity="center"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:textSize="12sp"
+                android:textColor="#fff"
+                android:layout_weight="1" />
+        </LinearLayout>
+    </android.support.v7.widget.CardView>
+
+    <include layout="@layout/bottom_button_layout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:layout_marginBottom="10dp"/>
+
+</LinearLayout>

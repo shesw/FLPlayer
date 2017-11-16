@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Songs_SSW</string>
+
+
+
+    <string name="one">安且吉兮</string>
+    <string name="two">生生忘</string>
+    <string name="three">主旋律</string>
+    <string name="four">夏天雨</string>
+    <string name="five">言之无物的歌</string>
+    <string name="six">雨云词</string>
+    <string name="seven">摇篮曲</string>
+    <string name="eight">寻常</string>
+    <string name="nine">不见你的夏天</string>
+
+    <!-- author -->
+    <string name="csl">君子亮</string>
+    <string name="wl">汪啊锣</string>
+
+
+</resources>

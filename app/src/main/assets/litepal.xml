@@ -1,0 +1,9 @@
+<litepal>
+
+    <dbname value = "SongsStore"/>
+    <version value = "1"/>
+    <list>
+        <mapping class = "com.compassl.anji.songs_ssw.db.SongInfo"/>
+    </list>
+
+</litepal>
