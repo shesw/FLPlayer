@@ -1,4 +1,0 @@
-﻿<song_mp3_01>http://10.0.2.2:90/安且吉兮.mp3</>
-<song_lyc_01>http://10.0.2.2:90/ssw01.txt</>
-<song_bgs_01>http://10.0.2.2:90/ssw_bs_01.txt</>
-<song_img_01>http://10.0.2.2:90/安且吉兮.jpg</>

@@ -11,8 +11,14 @@ import android.util.Size;
 
 import com.compassl.anji.songs_ssw.R;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,23 +33,33 @@ import okhttp3.Response;
  */
 public class TextHandle {
 
+    //根据string内容获得具体文件的下载地址
+    public static String[] getWholeFilePath(Context context,int id){
 
-    //传入what样例：song_mp3_01
-    public static String getSongInfoUrl(Context context,String what) throws IOException {
-        String returnInfo;
-        String filePath = "song_info_"+what.substring(what.length()-2,what.length())+".txt";
-        InputStream is = context.getAssets().open(filePath);
-        int size = is.available();
-        byte[] buffer = new byte[size];
-        is.read(buffer);
-        String str = new String(buffer);
-        int res = str.indexOf(what);
-        if ( res != -1 ){
-            returnInfo = str.substring(str.indexOf("http",res),str.indexOf("</>",res));
-        }else{
-            return null;
+        String line = "";
+        try {
+            InputStream is = new FileInputStream(context.getFilesDir().getAbsolutePath()+"/FLMusic/song_info.txt");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+            while (id-- >0){
+                reader.readLine();
+            }
+            line = reader.readLine();
+            is.close();
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return returnInfo;
+
+        int m_index = line.indexOf("[m!")+3;
+        int l_index = line.indexOf("[l!")+3;
+        int b_index = line.indexOf("[b!")+3;
+
+        String urlMp3 = line.substring(m_index,line.indexOf("]",m_index));
+        String urlLyc = line.substring(l_index,line.indexOf("]",l_index));
+        String urlBgs = line.substring(b_index,line.indexOf("]",b_index));
+
+        return new String[]{urlMp3,urlLyc,urlBgs};
+
     }
 
     public static String getLrcInfo(String allLrc){

@@ -5,8 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
@@ -27,9 +30,6 @@ import okhttp3.Response;
 
 public class DownloadMusic extends Service {
     private static final String TAG = "DownloadMusic";
-    public DownloadMusic() {
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -37,15 +37,24 @@ public class DownloadMusic extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
+        int index = intent.getIntExtra("id",-1);
+        String name = intent.getStringExtra("name");
+        if (index==-1){
+            return super.onStartCommand(intent,flags,startId);
+        }
         //下载地址
-        final String urlMp3 = intent.getStringExtra("urlMp3");
-        final String urlLyc = intent.getStringExtra("urlLyc");
-        final String urlBgs = intent.getStringExtra("urlBgs");
+        String[] str3 = TextHandle.getWholeFilePath(DownloadMusic.this,index);
+        download(index,name,str3);
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    private void download(int index,String name ,String[] str3) {
+        final String urlMp3 = str3[0];
+        final String urlLyc = str3[1];
+        final String urlBgs = str3[2];
         //存储地址
-        String index_str = intent.getStringExtra("is");
         //String downloadSavePath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/FLMusic";
-        String downloadSavePath = getFilesDir().getAbsolutePath()+"/FLMusic";
+        String downloadSavePath = getFilesDir().getAbsolutePath()+"/FLMusic/"+name;
         File file = new File(downloadSavePath);
         boolean isSuc = false;
         if (!file.exists()){
@@ -53,10 +62,9 @@ public class DownloadMusic extends Service {
         }
         Log.d(TAG, "downloadSavePath: "+downloadSavePath);
         Log.d(TAG, "make file " + isSuc);
-        final String saveMp3 = downloadSavePath+"/"+index_str+".mp3";
-        final String saveLyc = downloadSavePath+"/"+index_str+"_lyc.txt";
-        final String savebgs = downloadSavePath+"/"+index_str+"_bgs.txt";
-
+        final String saveMp3 = downloadSavePath+".mp3";
+        final String saveLyc = downloadSavePath+"_lyc.txt";
+        final String saveBgs = downloadSavePath+"_bgs.txt";
 
         Thread thread = new Thread(new Runnable() {
             @Override
@@ -91,7 +99,7 @@ public class DownloadMusic extends Service {
                 try {
                     Response response = client.newCall(request2).execute();
                     byte[] content = response.body().bytes();
-                    OutputStream os = new FileOutputStream(savebgs);
+                    OutputStream os = new FileOutputStream(saveBgs);
                     os.write(content);
                     os.flush();
                     os.close();
@@ -109,10 +117,10 @@ public class DownloadMusic extends Service {
 
         Intent intent1 = new Intent("notification_button");
         intent1.putExtra("noti",9);
-        intent1.putExtra("index",index_str);
+        intent1.putExtra("index",index);
         sendBroadcast(intent1);
         stopSelf();
-        return super.onStartCommand(intent, flags, startId);
+
     }
 
     @Override

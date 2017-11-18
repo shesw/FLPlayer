@@ -16,6 +16,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -104,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView tv_display_time_current;
     private TextView tv_display_time_total;
     private ImageView iv_background;
+    private ImageButton ib_refresh_list;
     private MyLrcView lv_ly;
     private MediaPlayer mediaPlayer = new MediaPlayer();
     private NotiReceiver receiver;
@@ -112,8 +115,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private NotificationManager manager;
     private NotificationCompat.Builder builder;
     private AudioManager audioManager;
-    private Boolean[] isDownloadeded;
     //private EarReceiver receiver_ear;
+    private String downloadPath;
 
     private AudioManager.OnAudioFocusChangeListener onAudioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
@@ -122,16 +125,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
-    public EarReceiver earReceiver = new EarReceiver(){
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            changPP();
-        }
-    };
+//    public EarReceiver earReceiver = new EarReceiver(){
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            changPP();
+//        }
+//    };
 
     private static final int SEEK_BAR_UPDATE = 1;
-    private static final int SET_LYC = 2;
-    private static final int SET_BGS = 3;
+    private static final int GET_LY = 2;
+    private static final int GET_BS = 3;
+    private static final int GET_NEW_SONG = 4;
     //Handler 类，处理子线程发出的请求
     private Handler handler = new Handler(){
         public void handleMessage(Message message){
@@ -143,16 +147,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }catch (Exception e ){e.printStackTrace();}
                     lv_ly.updateTime(mediaPlayer.getCurrentPosition());
                     break;
-                case SET_LYC :
-                    Bundle data = message.getData();
-                    String str = data.getString("lyc");
-                    lv_ly.loadLrc(str);
-                    tv_song_info.setText(TextHandle.getLrcInfo(str));
+                case GET_LY:
+                    String lyc_content = message.getData().getString("lyc");
+                    lv_ly.loadLrc(lyc_content);
+                    tv_song_info.setText(TextHandle.getLrcInfo(lyc_content));
                     break;
-                case SET_BGS:
-                    Bundle data1 = message.getData();
-                    String str1 = data1.getString("bgs");
-                    tv_bs.setText(str1);
+                case GET_BS:
+                    tv_bs.setText(message.getData().getString("bgs"));
+                    break;
+                case GET_NEW_SONG:
+                    initRecyclerView();
+                    ib_refresh_list.setImageResource(R.drawable.refresh_list);
+                    Toast.makeText(MainActivity.this,"ok",Toast.LENGTH_SHORT).show();
                     break;
                 default:
                     break;
@@ -160,6 +166,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             tv_display_time_current.setText(MathUtil.getDisplayTime(mediaPlayer.getCurrentPosition()));
         }
     };
+
 
     //监听通知栏发出的广播
     class NotiReceiver extends BroadcastReceiver{
@@ -179,23 +186,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     onDestroy();
                     break;
                 case 9:
-                    String index_downloaded = intent.getStringExtra("index");
-                    if (index_downloaded!=null){
-                        refreshDownloadStatus(index_downloaded);
-                        Toast.makeText(MainActivity.this,"downloaded",Toast.LENGTH_SHORT).show();
+                    int index_downloaded = intent.getIntExtra("index",-1);
+                    if (index_downloaded!=-1){
+                        Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded).getName()+" downloaded",Toast.LENGTH_SHORT).show();
                     }
+                    break;
+                case 10:
+                    //Toast.makeText(MainActivity.this,"new song",Toast.LENGTH_SHORT).show();
+                    ib_refresh_list.setImageResource(R.drawable.refresh_list_new);
                     break;
                 default:
                     break;
             }
         }
     }
-    private void refreshDownloadStatus(String index_downloaded) {
-        SharedPreferences prefs_d = getSharedPreferences("download",MODE_PRIVATE);
-        prefs_d.edit().putBoolean(index_downloaded,true).apply();
-        int index_d = Integer.parseInt(index_downloaded);
-        isDownloadeded[index_d-1]=true;
-    }
+
 
 
     /**
@@ -230,6 +235,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tv_display_time_current = (TextView) findViewById(R.id.tv_display_time_current);
         sb_song_play_progress = (SeekBar) findViewById(R.id.sb_song_progress);
         iv_background = (ImageView) findViewById(R.id.iv_background);
+        ib_refresh_list = (ImageButton) findViewById(R.id.ib_refresh_songList);
 
         //设置背景图案
         SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
@@ -299,6 +305,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_mode.setOnClickListener(this);
         bt_download.setOnClickListener(this);
         fbt_home.setOnClickListener(this);
+        ib_refresh_list.setOnClickListener(this);
 
         vf_ly_bs.setDisplayedChild(CURRENT_LY);
         //为歌曲信息的TextView设置属性
@@ -399,8 +406,75 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }).start();
 
+        //音乐下载地址
+        downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
+        //判断有无配置文件，若没有，则创建
+        if (!hasSongInfoText()){
+            loadINfo();
+        }
+
         //加载拉动菜单中recyclerview布局的适配器
+        initRecyclerView();
+
+        //切换歌曲后，由于是第一次打开，歌曲不进行自动播放，而在
+        //changSong(int index)方法中的末尾会把该按钮设为暂停图案，故在此处需要手动设置播放图案。
+        bt_play_pause.setImageResource(R.drawable.play);
+        //切换到第一首歌的播放界面
+        if (SONG_ACCOUNT>0) {
+            changeSong(1);
+            createNotification();
+        }
+
+    }
+
+    private void loadINfo() {
+        try {
+            InputStream is = getAssets().open("song_info.txt");
+            byte[] buf = new byte[is.available()];
+            is.read(buf);
+            String filePath = downloadPath+"song_info.txt";
+            OutputStream os = new FileOutputStream(filePath);
+            os.write(buf);
+            os.flush();
+            is.close();
+            os.close();
+            //判断有无图片文件夹，若没有则创建
+            hasImg(downloadPath+"img");
+            for (int i = 1;i<=SONG_ACCOUNT;i++){
+                String index_str = i>9?i+"":"0"+i;
+                InputStream is1 = new FileInputStream("file:///android_asset/img/s"+index_str+".jpg");
+                byte[] buf1 = new byte[is1.available()];
+                is1.read(buf1);
+                is1.close();
+                String imgPath = downloadPath+"/img/s"+index_str+".jpg";
+                OutputStream os1 = new FileOutputStream(imgPath);
+                os1.write(buf1);
+                os1.flush();
+                os1.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private boolean hasSongInfoText() {
+        File file = new File(downloadPath);
+        if (!file.exists()){
+            file.mkdir();
+        }
+        File file1 = new File(downloadPath+"song_info.txt");
+        return file1.exists();
+    }
+    private void hasImg(String path){
+        File file = new File(path);
+        if (!file.exists()){
+            file.mkdir();
+        }
+    }
+
+    //方法：加载RecyclerView
+    private void initRecyclerView() {
         songList=InitialTool.initSongChoose(MainActivity.this);
+        SONG_ACCOUNT = songList.size();
         StaggeredGridLayoutManager manager = new StaggeredGridLayoutManager(3,StaggeredGridLayoutManager.VERTICAL);
         rv.setLayoutManager(manager);
         rv.setHasFixedSize(true);
@@ -408,73 +482,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         rv.setAdapter(adapter);
         adapter.setOnItemClickListenerRV(this);
         //是否已经下载完成的数组初始化
-        SONG_ACCOUNT = songList.size();
-        isDownloadeded = new Boolean[SONG_ACCOUNT];
-        SharedPreferences prefs_default = getSharedPreferences("download",MODE_PRIVATE);
-        for (int i = 0;i<SONG_ACCOUNT;i++){
-            String index_str = i>9?i+"":"0"+i;
-            isDownloadeded[i] = prefs_default.getBoolean(index_str,false);
-        }
-//        //子线程检查已经下载的歌曲是否被删除
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                while (true){
-//                    for (int i = 0; i<SONG_ACCOUNT;i++){
-//                        if (isDownloadeded[i]){
-//                            String index_str = index>9?""+index:"0"+index;
-//                            String mp3File = Environment.getExternalStorageDirectory().getAbsolutePath()+"FLMusic"+"/"+index_str+".mp3";
-//                            String lycFile = Environment.getExternalStorageDirectory().getAbsolutePath()+"FLMusic"+"/"+index_str+".txt";
-//                            String bgsFile = Environment.getExternalStorageDirectory().getAbsolutePath()+"FLMusic"+"/"+index_str+".txt";
-//                            File file1 = new File(mp3File);
-//                            File file2 = new File(lycFile);
-//                            File file3 = new File(bgsFile);
-//                            if (!file1.exists() || !file2.exists() || !file3.exists()){
-//                                isDownloadeded[i] = false;
-//                                SharedPreferences prefs = getSharedPreferences("download",MODE_PRIVATE);
-//                                prefs.edit().remove(index_str).putBoolean(index_str,false).apply();
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }).start();
-
-        //切换到第一首歌的播放界面
-        changeSong(1);
-        createNotification();
-
-        //切换歌曲后，由于是第一次打开，歌曲不进行自动播放，而在
-        //changSong(int index)方法中的末尾会把该按钮设为暂停图案，故在此处需要手动设置播放图案。
-        bt_play_pause.setImageResource(R.drawable.play );
     }
-
-
-
-        @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (event.getAction()==KeyEvent.ACTION_DOWN){
-            changPP();
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
-//    //方法：检验是否为新的一天，若是，需要重新从网上更新背景图片
-//    private boolean isNewDay() {
-//        SharedPreferences prefs = getSharedPreferences("date",MODE_PRIVATE);
-//        int year = prefs.getInt("year",0);
-//        int day_of_year=prefs.getInt("day_of_year",0);
-//        Calendar date = Calendar.getInstance();
-//        int year_now = date.get(Calendar.YEAR);
-//        int day_of_year_now = date.get(Calendar.DAY_OF_YEAR);
-//        return !( year_now==year && day_of_year_now==day_of_year );
-//    }
-
-
     //方法：转换歌曲
     private void changeSong(int i) {
-        index=i;
         mediaPlayer.reset();
+        index=i;
         if (MODE == MODE_RANDOM) {
             int temp = new Random().nextInt(SONG_ACCOUNT)+1;
             index = (temp==index)?temp+1:temp;
@@ -483,23 +495,63 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (MODE == MODE_PLAY_BY_ORDER && index == 1){
             onDestroy();
         }
+        //加载音乐、歌词和文案
+        if (!setMLB()){
+            return;
+        }
+        //播放器的结束时监听
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                index = (index>=SONG_ACCOUNT)?0:index;
+                changeSong(++index);
+                 mediaPlayer.start();
+            }
+        });
+        //显示歌词
+        vf_ly_bs.setDisplayedChild(CURRENT_LY);
+        currentPage = CURRENT_LY;
+    }
 
-        String index_str = (index>9)?index+"":"0"+index;
-        Log.d(TAG, "is downloaded "+isDownloadeded[index-1]);
-        if (isDownloadeded[index-1]){
-            //String downloadSavePath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/FLMusic";
-            String downloadSavePath = getFilesDir().getAbsolutePath()+"/FLMusic";
-            String saveMp3 = downloadSavePath+"/"+index_str+".mp3";
-            String saveLyc = downloadSavePath+"/"+index_str+"_lyc.txt";
-            String savebgs = downloadSavePath+"/"+index_str+"_bgs.txt";
-            //加载音乐
+    private boolean setMLB() {
+        boolean[] isDownloaded = isDownloaded(index);
+        String name = "";
+        boolean isN = false;
+        String[] str3 = new String[]{"","",""};
+        if (!(isDownloaded[0]&&isDownloaded[1]&&isDownloaded[2])){
+            str3 = TextHandle.getWholeFilePath(MainActivity.this,index);
+            isN = isNetWorkAvailable();
+        }else {
+            name = songList.get(index-1).getName();
+        }
+        //加载音乐
+        if (isDownloaded[0]){
+            String saveMp3 = downloadPath+name+".mp3";
             try {
                 mediaPlayer.setDataSource(saveMp3);
                 mediaPlayer.prepare();
+                tv_display_time_total.setText(MathUtil.getDisplayTime(mediaPlayer.getDuration()));
+                if (mediaPlayer.isPlaying()){
+                    mediaPlayer.pause();
+                    bt_play_pause.setImageResource(R.drawable.pause);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            //加载文字
+        }else if (isN){
+            try {
+                mediaPlayer.setDataSource(str3[0]);
+                mediaPlayer.prepare();
+                tv_display_time_total.setText(MathUtil.getDisplayTime(mediaPlayer.getDuration()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else{
+            return false;
+        }
+        //加载歌词和信息
+        if (isDownloaded[1]){
+            String saveLyc = downloadPath+name+"_lyc.txt";
             try {
                 InputStream is = new FileInputStream(saveLyc);
                 byte[] buffer = new byte[is.available()];
@@ -511,8 +563,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //歌词中的歌曲信息
                 String info = TextHandle.getLrcInfo(lrc_content);
                 tv_song_info.setText(info);
-                //装载文案
-                InputStream is1 = new FileInputStream(savebgs);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else if (isN){
+            HttpUtil.sendOkHttpRequest(str3[1], new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                }
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    Message message = new Message();
+                    message.what = GET_LY;
+                    Bundle data = new Bundle();
+                    data.putString("lyc",response.body().string());
+                    message.setData(data);
+                    handler.sendMessage(message);
+                }
+            });
+        }else {
+            lv_ly.loadLrc("无网络连接，暂无歌词");
+            tv_song_info.setText("无网络连接，暂无信息");
+        }
+        //装载文案
+        if(isDownloaded[2]){
+            String saveBgs = downloadPath+name+"_bgs.txt";
+            try {
+                InputStream is1 = new FileInputStream(saveBgs);
                 byte[] buf = new byte[is1.available()];
                 is1.read(buf);
                 String bgs = new String(buf);
@@ -521,74 +598,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }else if(isN){
+            HttpUtil.sendOkHttpRequest(str3[2], new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                }
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    Message message = new Message();
+                    message.what = GET_BS;
+                    Bundle data = new Bundle();
+                    data.putString("bgs",response.body().string());
+                    message.setData(data);
+                    handler.sendMessage(message);
+                }
+            });
         }else {
-            try {
-                String urlMp3 = TextHandle.getSongInfoUrl(MainActivity.this, "song_mp3_" + index_str);
-                final String urlLyc = TextHandle.getSongInfoUrl(MainActivity.this, "song_lyc_" + index_str);
-                final String urlbgs = TextHandle.getSongInfoUrl(MainActivity.this, "song_bgs_" + index_str);
-                mediaPlayer.setDataSource(urlMp3);
-                mediaPlayer.prepare();
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        OkHttpClient client = new OkHttpClient();
-                        Request.Builder builder = new Request.Builder();
-                        Request request = builder.url(urlLyc).build();
-                        try {
-                            Response response = client.newCall(request).execute();
-                            Message message = new Message();
-                            message.what = SET_LYC;
-                            Bundle data = new Bundle();
-                            String str = response.body().string();
-                            data.putString("lyc",str);
-                            message.setData(data);
-                            handler.sendMessage(message);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }).start();
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        OkHttpClient client = new OkHttpClient();
-                        Request.Builder builder = new Request.Builder();
-                        Request request = builder.url(urlbgs).build();
-                        try {
-                            Response response = client.newCall(request).execute();
-                            Message message = new Message();
-                            message.what = SET_BGS;
-                            Bundle data = new Bundle();
-                            String str = response.body().string();
-                            data.putString("bgs",str);
-                            message.setData(data);
-                            handler.sendMessage(message);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }).start();
-            } catch (IOException e) {
-                e.printStackTrace();
+            tv_bs.setText("没网，暂无");
+        }
+        return true;
+    }
+
+    private boolean isNetWorkAvailable() {
+        ConnectivityManager manager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (manager!=null){
+            NetworkInfo info = manager.getActiveNetworkInfo();
+            if (info!=null && info.isAvailable() && info.getState()==NetworkInfo.State.CONNECTED){
+                return true;
             }
         }
-
-        //播放器的结束时监听
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                index = (index>=SONG_ACCOUNT)?0:index;
-                changeSong(++index);
-                mediaPlayer.start();
-            }
-        });
-        //歌词总时间
-        tv_display_time_total.setText(MathUtil.getDisplayTime(mediaPlayer.getDuration()));
-        //切换歌曲后自动播放，但是第一次进页面不播放
-        bt_play_pause.setImageResource(R.drawable.pause);
-        //显示歌词
-        vf_ly_bs.setDisplayedChild(CURRENT_LY);
-        currentPage = CURRENT_LY;
+        return false;
     }
 
 
@@ -616,39 +655,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         view.setOnClickPendingIntent(R.id.ib_fore_next,getClickPendingIntent(2));
         view.setOnClickPendingIntent(R.id.fore_close,getClickPendingIntent(3));
         view.setTextViewText(R.id.tv_fore_song_name,songList.get(index-1).getName());
-        final Handler handler1 = new Handler(){
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what){
-                    case 99:
-                        String img = msg.getData().getString("img");
-                        view.setImageViewBitmap(R.id.fore_img,BitmapFactory.decodeByteArray(img.getBytes(),0,img.length()));
-                        break;
-                    default:
-                        break;
-                }
-            }
-        };
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                OkHttpClient client = new OkHttpClient();
-                Request request = new Request.Builder().url(songList.get(index-1).getImgRes()).build();
-                try {
-                    Response response = client.newCall(request).execute();
-                    String res = response.body().string();
-                    Message message = new Message();
-                    message.what = 99;
-                    Bundle data = new Bundle();
-                    data.putString("img",res);
-                    message.setData(data);
-                    handler1.sendMessage(message);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }).start();
+        view.setImageViewBitmap(R.id.fore_img,BitmapFactory.decodeFile(songList.get(index-1).getImgRes()));
         if (mediaPlayer.isPlaying()){
             view.setImageViewResource(R.id.ib_fore_p_p,R.drawable.pause);
         }else {
@@ -664,24 +671,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return clickIntent;
     }
 
-
-//    //方法：歌词与文案图标的切换
-//    private void changeShow() {
-//        changToNext();
-//        switch (currentPage){
-//            case CURRENT_INFO :
-//                bt_ly_bs.setImageResource(R.drawable.song_info);
-//                break;
-//            case CURRENT_LY :
-//                bt_ly_bs.setImageResource(R.drawable.ly);
-//                break;
-//            case CURRENT_BS :
-//                bt_ly_bs.setImageResource(R.drawable.bs);
-//                break;
-//            default:
-//                break;
-//        }
-//    }
     private void changeToPrevious() {
         vf_ly_bs.setInAnimation(this,R.anim.push_right_in);
         vf_ly_bs.setOutAnimation(this,R.anim.push_right_out);
@@ -689,15 +678,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (currentPage){
             case CURRENT_INFO :
                 currentPage = CURRENT_BS;
-               // bt_ly_bs.setImageResource(R.drawable.bs);
                 break;
             case CURRENT_LY :
                currentPage = CURRENT_INFO;
-               // bt_ly_bs.setImageResource(R.drawable.song_info);
                 break;
             case CURRENT_BS :
                 currentPage = CURRENT_LY;
-              //  bt_ly_bs.setImageResource(R.drawable.ly);
                 break;
             default:
                 break;
@@ -710,15 +696,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (currentPage){
             case CURRENT_INFO :
                 currentPage = CURRENT_LY;
-             //   bt_ly_bs.setImageResource(R.drawable.ly);
                 break;
             case CURRENT_LY :
                 currentPage = CURRENT_BS;
-            //    bt_ly_bs.setImageResource(R.drawable.bs);
                 break;
             case CURRENT_BS :
                 currentPage = CURRENT_INFO;
-             //   bt_ly_bs.setImageResource(R.drawable.song_info);
                 break;
             default:
                 break;
@@ -762,31 +745,76 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Toast.makeText(MainActivity.this,"列表循环",Toast.LENGTH_SHORT).show();
                 }
                 break;
-//            case R.id.bt_ly_bs:
-//                changeShow();
-//                break;
             case R.id.bt_download:
-                if (!isDownloadeded[index-1]){
+                boolean isn = isNetWorkAvailable();
+                boolean isd = isDownloaded(index)[0];
+                if (isn && !isd){
                     Intent intent = new Intent(MainActivity.this, DownloadMusic.class);
-                    String index_str = index>9?index+"":"0"+index;
-                    try {
-                        intent.putExtra("is",index_str);
-                        intent.putExtra("urlMp3",TextHandle.getSongInfoUrl(this,"song_mp3_"+index_str));
-                        intent.putExtra("urlLyc",TextHandle.getSongInfoUrl(this,"song_lyc_"+index_str));
-                        intent.putExtra("urlBgs",TextHandle.getSongInfoUrl(this,"song_bgs_"+index_str));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    intent.putExtra("id",index);
+                    intent.putExtra("name",songList.get(index-1).getName());
                     startService(intent);
+                }else if (isd){
+                    Toast.makeText(MainActivity.this,"already downloaded",Toast.LENGTH_SHORT).show();
                 }else {
-                    Toast.makeText(MainActivity.this,"aready downloaded",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this,"no network",Toast.LENGTH_SHORT).show();
                 }
                 break;
             case R.id.fbt_menu:
                 drawerLayout.openDrawer(GravityCompat.START);
                 break;
+            case R.id.ib_refresh_songList:
+                loadNewSong();
+                break;
+            default:
+                break;
         }
     }
+    //更新歌曲列表
+    private void loadNewSong() {
+        String url = "http://10.0.2.2:90/song_info.txt";
+        HttpUtil.sendOkHttpRequest(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+            }
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String savePath = downloadPath+"song_info.txt";
+                byte[] buf = response.body().bytes();
+                File file = new File(savePath);
+                if (file.exists()){
+                    file.delete();
+                }
+                OutputStream os = new FileOutputStream(savePath);
+                os.write(buf);
+                os.flush();
+                os.close();
+                for (int i = 1;i<=SONG_ACCOUNT;i++){
+                    final String i_str = i>9?""+i:"0"+i;
+                    final int ii = i;
+                    HttpUtil.sendOkHttpRequest("http://10.0.2.2:90/song_img/s" + i_str + ".jpg", new Callback() {
+                        @Override
+                        public void onFailure(Call call, IOException e) {
+                        }
+                        @Override
+                        public void onResponse(Call call, Response response) throws IOException {
+                            byte[] buf1 = response.body().bytes();
+                            String imgPath = downloadPath+"/img/s"+i_str+".jpg";
+                            OutputStream os1 = new FileOutputStream(imgPath);
+                            os1.write(buf1);
+                            os1.flush();
+                            os1.close();
+                            if (ii==SONG_ACCOUNT){
+                                Message message = new Message();
+                                message.what = GET_NEW_SONG;
+                                handler.sendMessage(message);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
 
     private void playNext() {
         if (index==SONG_ACCOUNT){
@@ -794,16 +822,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }else {
             changeSong(++index);
         }
-        mediaPlayer.start();
+        if (!mediaPlayer.isPlaying()) {
+            mediaPlayer.start();
+        }
         createNotification();
     }
     private void changPP() {
         if (!mediaPlayer.isPlaying()){
             bt_play_pause.setImageResource(R.drawable.pause);
-            mediaPlayer.start();
+            if (!mediaPlayer.isPlaying()){
+                mediaPlayer.start();
+            }
         }else {
             bt_play_pause.setImageResource(R.drawable.play);
-            mediaPlayer.pause();
+            if (mediaPlayer.isPlaying()){
+                mediaPlayer.pause();
+            }
         }
         createNotification();
     }
@@ -813,8 +847,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }else {
             changeSong(--index);
         }
-        mediaPlayer.start();
+        if (!mediaPlayer.isPlaying()){
+            mediaPlayer.start();
+        }
         createNotification();
+    }
+
+    //判断是否已经下载
+    private boolean[] isDownloaded(int id){
+        String name = songList.get(id-1).getName();
+        String saveMp3 = downloadPath+name+".mp3";
+        String saveLyc = downloadPath+name+"_lyc.txt";
+        String saveBgs = downloadPath+name+"_bgs.txt";
+        File mp3File = new File(saveMp3);
+        File lycFile = new File(saveLyc);
+        File bgsFile = new File(saveBgs);
+        return new boolean[]{mp3File.exists(),lycFile.exists(),bgsFile.exists()};
     }
 
     @Override
@@ -822,7 +870,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         index=position+1;
         drawerLayout.closeDrawers();
         changeSong(index);
-        mediaPlayer.start();
+        if (!mediaPlayer.isPlaying()){
+            mediaPlayer.start();
+            bt_play_pause.setImageResource(R.drawable.pause);
+        }
         createNotification();
     }
     @Override
@@ -861,8 +912,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         manager.cancel(1);
         unregisterReceiver(receiver);
         audioManager.abandonAudioFocus(onAudioFocusChangeListener);
-//        unregisterReceiver(receiver_ear);
-//        Calendar date = Calendar.getInstance();
 
         finish();
     }

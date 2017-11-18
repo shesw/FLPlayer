@@ -15,7 +15,12 @@ import com.bumptech.glide.Glide;
 import com.compassl.anji.songs_ssw.MainActivity;
 import com.compassl.anji.songs_ssw.util.HttpUtil;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -32,6 +37,7 @@ public class UpdateBackgroundPic extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        loadNewSong();
         loadBingPic();
         AlarmManager manager = (AlarmManager) getSystemService(ALARM_SERVICE);
         int anHour = 8 * 60 * 60 * 1000;
@@ -41,6 +47,27 @@ public class UpdateBackgroundPic extends Service {
         manager.cancel(pi);
         manager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,triggerAtTime,pi);
         return super.onStartCommand(intent,flags,startId);
+    }
+
+    private void loadNewSong() {
+        String url = "http://10.0.2.2:90/song_info.txt";
+        HttpUtil.sendOkHttpRequest(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String savePath = getFilesDir().getAbsolutePath()+"/FLMusic/song_info.txt";
+                byte[] buf = response.body().bytes();
+                InputStream is = new FileInputStream(savePath);
+                if (is.available() != buf.length){
+                    Intent intent = new Intent("notification_button");
+                    intent.putExtra("noti",10);
+                    sendBroadcast(intent);
+                }
+            }
+        });
     }
 
     //方法：从网上更新背景图片
