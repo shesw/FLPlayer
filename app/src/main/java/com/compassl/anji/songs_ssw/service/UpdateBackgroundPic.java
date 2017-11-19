@@ -6,6 +6,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
@@ -13,6 +14,7 @@ import android.os.SystemClock;
 
 import com.bumptech.glide.Glide;
 import com.compassl.anji.songs_ssw.MainActivity;
+import com.compassl.anji.songs_ssw.R;
 import com.compassl.anji.songs_ssw.util.HttpUtil;
 
 import java.io.File;
@@ -80,9 +82,22 @@ public class UpdateBackgroundPic extends Service {
             }
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                final String bingPic = response.body().string();
+
                 SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
-                prefs.edit().putString("todayPic",bingPic).apply();
+                int picture_id = prefs.getInt("id",-1);
+                if (picture_id == -1){
+                    prefs.edit().putInt("id",0).apply();
+                    prefs.edit().putString("pic"+1, BitmapFactory.decodeResource(getResources(), R.drawable.background_pic_default).toString()).apply();
+                    return;
+                }
+                if (picture_id == 0 || picture_id == 7){
+                    prefs.edit().putInt("id",1).apply();
+                    picture_id = 1;
+                }else {
+                    prefs.edit().putInt("id",++picture_id).apply();
+                }
+                final String bingPic = response.body().string();
+                prefs.edit().putString("pic"+picture_id,bingPic).apply();
             }
         });
     }

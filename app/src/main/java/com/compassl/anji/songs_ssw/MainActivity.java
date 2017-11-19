@@ -239,10 +239,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //设置背景图案
         SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
-        String bingPic = prefs.getString("todayPic",null);
-        if (bingPic != null){
-            Glide.with(this).load(bingPic).into(iv_background);
+        int pic_id = prefs.getInt("id",-1);
+        if (pic_id!=-1){
+            String bingPic = prefs.getString("pic"+pic_id,null);
+            if (bingPic != null){
+                Glide.with(this).load(bingPic).into(iv_background);
+            }
         }
+
         //设置背景图片的刷新
         final SwipeRefreshLayout layout_fresh = (SwipeRefreshLayout) findViewById(R.id.layout_fresh);
         layout_fresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
@@ -260,8 +264,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             @Override
                             public void run() {
                                 SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
-                                String bingPic = prefs.getString("todayPic",null);
-                                if (bingPic != null){
+                                int pic_id = prefs.getInt("id",-1);
+                                if (pic_id!=-1){
+                                    Random random = new Random();
+                                    int id_use = random.nextInt(8);
+                                    String bingPic = prefs.getString("pic"+id_use,null);
+                                    while (bingPic == null && id_use>1){
+                                        bingPic = prefs.getString("pic"+(--id_use),null);
+                                    }
                                     Glide.with(MainActivity.this).load(bingPic).into(iv_background);
                                 }
                                 //启动更新背景图片服务
