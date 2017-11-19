@@ -43,7 +43,7 @@ public class DownloadMusic extends Service {
             return super.onStartCommand(intent,flags,startId);
         }
         //下载地址
-        String[] str3 = TextHandle.getWholeFilePath(DownloadMusic.this,index);
+        String[] str3 = TextHandle.getWholeFilePath(index);
         download(index,name,str3);
         return super.onStartCommand(intent, flags, startId);
     }
@@ -53,18 +53,17 @@ public class DownloadMusic extends Service {
         final String urlLyc = str3[1];
         final String urlBgs = str3[2];
         //存储地址
-        //String downloadSavePath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/FLMusic";
-        String downloadSavePath = getFilesDir().getAbsolutePath()+"/FLMusic/"+name;
+        String downloadSavePath = getFilesDir().getAbsolutePath()+"/FLMusic";
         File file = new File(downloadSavePath);
         boolean isSuc = false;
         if (!file.exists()){
-            isSuc = file.mkdir();
+            isSuc = file.mkdirs();
         }
         Log.d(TAG, "downloadSavePath: "+downloadSavePath);
         Log.d(TAG, "make file " + isSuc);
-        final String saveMp3 = downloadSavePath+".mp3";
-        final String saveLyc = downloadSavePath+"_lyc.txt";
-        final String saveBgs = downloadSavePath+"_bgs.txt";
+        final String saveMp3 = downloadSavePath+"/"+name+".mp3";
+        final String saveLyc = downloadSavePath+"/"+name+"_lyc.txt";
+        final String saveBgs = downloadSavePath+"/"+name+"_bgs.txt";
 
         Thread thread = new Thread(new Runnable() {
             @Override

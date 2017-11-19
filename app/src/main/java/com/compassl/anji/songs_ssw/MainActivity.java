@@ -46,12 +46,16 @@ import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import com.bumptech.glide.Glide;
+import com.compassl.anji.songs_ssw.db.SongInfo;
 import com.compassl.anji.songs_ssw.service.DownloadMusic;
 import com.compassl.anji.songs_ssw.service.UpdateBackgroundPic;
 import com.compassl.anji.songs_ssw.util.HttpUtil;
 import com.compassl.anji.songs_ssw.util.InitialTool;
 import com.compassl.anji.songs_ssw.util.TextHandle;
 import com.compassl.anji.songs_ssw.util.MathUtil;
+
+import org.litepal.LitePal;
+import org.litepal.crud.DataSupport;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -136,16 +140,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int GET_LY = 2;
     private static final int GET_BS = 3;
     private static final int GET_NEW_SONG = 4;
+    private boolean update = true;
     //Handler 类，处理子线程发出的请求
     private Handler handler = new Handler(){
         public void handleMessage(Message message){
             switch (message.what){
                 case SEEK_BAR_UPDATE:
-                    try {
-                        sb_song_play_progress.setMax(mediaPlayer.getDuration());
-                        sb_song_play_progress.setProgress(mediaPlayer.getCurrentPosition());
-                    }catch (Exception e ){e.printStackTrace();}
-                    lv_ly.updateTime(mediaPlayer.getCurrentPosition());
+                    if (update){
+                        try {
+                            sb_song_play_progress.setMax(mediaPlayer.getDuration());
+                            sb_song_play_progress.setProgress(mediaPlayer.getCurrentPosition());
+                        }catch (Exception e ){e.printStackTrace();}
+                        lv_ly.updateTime(mediaPlayer.getCurrentPosition());
+                    }
                     break;
                 case GET_LY:
                     String lyc_content = message.getData().getString("lyc");
@@ -163,11 +170,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 default:
                     break;
             }
-            tv_display_time_current.setText(MathUtil.getDisplayTime(mediaPlayer.getCurrentPosition()));
+            if (update){
+                tv_display_time_current.setText(MathUtil.getDisplayTime(mediaPlayer.getCurrentPosition()));
+            }
         }
     };
 
-
+    private boolean hasNew = false;
     //监听通知栏发出的广播
     class NotiReceiver extends BroadcastReceiver{
         @Override
@@ -188,11 +197,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 case 9:
                     int index_downloaded = intent.getIntExtra("index",-1);
                     if (index_downloaded!=-1){
-                        Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded).getName()+" downloaded",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded-1).getName()+" downloaded",Toast.LENGTH_SHORT).show();
                     }
                     break;
                 case 10:
-                    //Toast.makeText(MainActivity.this,"new song",Toast.LENGTH_SHORT).show();
+                    hasNew = true;
                     ib_refresh_list.setImageResource(R.drawable.refresh_list_new);
                     break;
                 default:
@@ -265,15 +274,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             public void run() {
                                 SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
                                 int pic_id = prefs.getInt("id",-1);
-                                if (pic_id!=-1){
-                                    Random random = new Random();
-                                    int id_use = random.nextInt(8);
-                                    String bingPic = prefs.getString("pic"+id_use,null);
-                                    while (bingPic == null && id_use>1){
-                                        bingPic = prefs.getString("pic"+(--id_use),null);
-                                    }
-                                    Glide.with(MainActivity.this).load(bingPic).into(iv_background);
+                                int id_use;
+                                if (pic_id!=-1 || pic_id == 7){
+                                    id_use = 0;
+                                }else {
+                                    id_use = pic_id+1;
                                 }
+                                prefs.edit().putInt("id",id_use).apply();
+                                String bingPic = prefs.getString("pic"+id_use,null);
+                                Glide.with(MainActivity.this).load(bingPic).into(iv_background);
                                 //启动更新背景图片服务
                                 Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
                                 startService(intent);
@@ -284,7 +293,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }).start();
             }
         });
-
+        //启动更新背景图片服务
+        Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
+        startService(intent);
         //设置通知栏广播监听事件
         receiver = new NotiReceiver();
         filter = new IntentFilter();
@@ -298,15 +309,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
             audioManager.registerMediaButtonEventReceiver(name);
         }
-//        receiver_ear = new EarReceiver();
-//        receiver_ear.setmEarListener(new EarReceiver.EarListener() {
-//            @Override
-//            public void onReceiveEar() {
-//                changPP();
-//            }
-//        });
-//        IntentFilter filter_ear = new IntentFilter("android.intent.action.MEDIA_BUTTON");
-//        registerReceiver(receiver_ear,filter_ear);
 
         //为按钮设置监听事件
         bt_previous.setOnClickListener(this);
@@ -316,8 +318,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_download.setOnClickListener(this);
         fbt_home.setOnClickListener(this);
         ib_refresh_list.setOnClickListener(this);
-
         vf_ly_bs.setDisplayedChild(CURRENT_LY);
+
         //为歌曲信息的TextView设置属性
         tv_song_info.getPaint().setFakeBoldText(true);
         tv_song_info.setOntouchListenerM(new MyTextView.onTouchListenerM() {
@@ -419,10 +421,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //音乐下载地址
         downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
         //判断有无配置文件，若没有，则创建
-        if (!hasSongInfoText()){
-            loadINfo();
+        if (!hasSongInfoText()) {
+            InitialTool.loadInfo(MainActivity.this, downloadPath, null);
         }
-
         //加载拉动菜单中recyclerview布局的适配器
         initRecyclerView();
 
@@ -437,48 +438,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    private void loadINfo() {
-        try {
-            InputStream is = getAssets().open("song_info.txt");
-            byte[] buf = new byte[is.available()];
-            is.read(buf);
-            String filePath = downloadPath+"song_info.txt";
-            OutputStream os = new FileOutputStream(filePath);
-            os.write(buf);
-            os.flush();
-            is.close();
-            os.close();
-            //判断有无图片文件夹，若没有则创建
-            hasImg(downloadPath+"img");
-            for (int i = 1;i<=SONG_ACCOUNT;i++){
-                String index_str = i>9?i+"":"0"+i;
-                InputStream is1 = new FileInputStream("file:///android_asset/img/s"+index_str+".jpg");
-                byte[] buf1 = new byte[is1.available()];
-                is1.read(buf1);
-                is1.close();
-                String imgPath = downloadPath+"/img/s"+index_str+".jpg";
-                OutputStream os1 = new FileOutputStream(imgPath);
-                os1.write(buf1);
-                os1.flush();
-                os1.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     private boolean hasSongInfoText() {
-        File file = new File(downloadPath);
-        if (!file.exists()){
-            file.mkdir();
+        File file = new File(downloadPath+"flsts");
+        boolean re = file.exists();
+        if (!re){
+            file.mkdirs();
         }
-        File file1 = new File(downloadPath+"song_info.txt");
-        return file1.exists();
-    }
-    private void hasImg(String path){
-        File file = new File(path);
-        if (!file.exists()){
-            file.mkdir();
-        }
+        return re;
     }
 
     //方法：加载RecyclerView
@@ -492,6 +458,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         rv.setAdapter(adapter);
         adapter.setOnItemClickListenerRV(this);
         //是否已经下载完成的数组初始化
+        Toast.makeText(MainActivity.this,"ok",Toast.LENGTH_SHORT).show();
     }
     //方法：转换歌曲
     private void changeSong(int i) {
@@ -527,9 +494,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         boolean[] isDownloaded = isDownloaded(index);
         String name = "";
         boolean isN = false;
-        String[] str3 = new String[]{"","",""};
+        String[] str3 = new String[]{null,null,null};
         if (!(isDownloaded[0]&&isDownloaded[1]&&isDownloaded[2])){
-            str3 = TextHandle.getWholeFilePath(MainActivity.this,index);
+            str3 = TextHandle.getWholeFilePath(index);
             isN = isNetWorkAvailable();
         }else {
             name = songList.get(index-1).getName();
@@ -773,57 +740,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 drawerLayout.openDrawer(GravityCompat.START);
                 break;
             case R.id.ib_refresh_songList:
-                loadNewSong();
+                if (hasNew){
+                    hasNew = false;
+                    ib_refresh_list.setImageResource(R.drawable.refresh_list);
+                    initRecyclerView();
+                }else {
+                    Toast.makeText(MainActivity.this,"no new song",Toast.LENGTH_SHORT).show();
+                }
                 break;
             default:
                 break;
         }
     }
-    //更新歌曲列表
-    private void loadNewSong() {
-        String url = "http://10.0.2.2:90/song_info.txt";
-        HttpUtil.sendOkHttpRequest(url, new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-            }
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                String savePath = downloadPath+"song_info.txt";
-                byte[] buf = response.body().bytes();
-                File file = new File(savePath);
-                if (file.exists()){
-                    file.delete();
-                }
-                OutputStream os = new FileOutputStream(savePath);
-                os.write(buf);
-                os.flush();
-                os.close();
-                for (int i = 1;i<=SONG_ACCOUNT;i++){
-                    final String i_str = i>9?""+i:"0"+i;
-                    final int ii = i;
-                    HttpUtil.sendOkHttpRequest("http://10.0.2.2:90/song_img/s" + i_str + ".jpg", new Callback() {
-                        @Override
-                        public void onFailure(Call call, IOException e) {
-                        }
-                        @Override
-                        public void onResponse(Call call, Response response) throws IOException {
-                            byte[] buf1 = response.body().bytes();
-                            String imgPath = downloadPath+"/img/s"+i_str+".jpg";
-                            OutputStream os1 = new FileOutputStream(imgPath);
-                            os1.write(buf1);
-                            os1.flush();
-                            os1.close();
-                            if (ii==SONG_ACCOUNT){
-                                Message message = new Message();
-                                message.what = GET_NEW_SONG;
-                                handler.sendMessage(message);
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
+
+
 
 
     private void playNext() {
@@ -889,13 +819,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onBackPressed() {
         final boolean isPlaying = mediaPlayer.isPlaying();
+        update = false;
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("退出");
         builder.setMessage("确认要退出应用吗？");
         builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                onDestroy();
+                MainActivity.super.onBackPressed();
             }
         });
         builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
@@ -904,6 +835,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (isPlaying){
                     mediaPlayer.start();
                 }
+                update = true;
             }
         });
         AlertDialog alertDialog = builder.create();
@@ -915,14 +847,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onDestroy() {
-        if (mediaPlayer!=null){
+        if (mediaPlayer!=null ) {
             mediaPlayer.stop();
+            mediaPlayer.reset();
             mediaPlayer.release();
         }
-        manager.cancel(1);
+        if (manager!=null){
+            manager.cancel(1);
+        }
         unregisterReceiver(receiver);
         audioManager.abandonAudioFocus(onAudioFocusChangeListener);
-
-        finish();
+        super.onDestroy();
     }
 }

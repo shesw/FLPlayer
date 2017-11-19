@@ -8,76 +8,61 @@ import org.litepal.crud.DataSupport;
 public class SongInfo extends DataSupport{
 
     private int id;
-    private int newId;
-    private String name;
-    private String author_lyrics;
-    private String author_melody;
-    private String lyrics;
-    private String description;
+    private int song_id;
+    private String song_name;
+    private String urlMp3;
+    private String urlLyc;
+    private String urlBgs;
 
-
-    public SongInfo(int newId, String name, String author_lyrics, String author_melody, String lyrics, String description) {
-        this.newId = newId;
-        this.name = name;
-        this.author_lyrics = author_lyrics;
-        this.author_melody = author_melody;
-        this.lyrics = lyrics;
-        this.description = description;
+    public SongInfo() {
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
+    public SongInfo(int id, int song_id, String song_name, String urlMp3, String urlLyc, String urlBgs) {
         this.id = id;
+        this.song_id = song_id;
+        this.song_name = song_name;
+        this.urlMp3 = urlMp3;
+        this.urlLyc = urlLyc;
+        this.urlBgs = urlBgs;
     }
 
-    public int getNewId() {
-        return newId;
+    public int getSong_id() {
+        return song_id;
     }
 
-    public void setNewId(int newId) {
-        this.newId = newId;
+    public void setSong_id(int song_id) {
+        this.song_id = song_id;
     }
 
-    public String getName() {
-        return name;
+    public String getSong_name() {
+        return song_name;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setSong_name(String song_name) {
+        this.song_name = song_name;
     }
 
-    public String getAuthor_lyrics() {
-        return author_lyrics;
+    public String getUrlMp3() {
+        return urlMp3;
     }
 
-    public void setAuthor_lyrics(String author_lyrics) {
-        this.author_lyrics = author_lyrics;
+    public void setUrlMp3(String urlMp3) {
+        this.urlMp3 = urlMp3;
     }
 
-    public String getAuthor_melody() {
-        return author_melody;
+    public String getUrlLyc() {
+        return urlLyc;
     }
 
-    public void setAuthor_melody(String author_melody) {
-        this.author_melody = author_melody;
+    public void setUrlLyc(String urlLyc) {
+        this.urlLyc = urlLyc;
     }
 
-    public String getLyrics() {
-        return lyrics;
+    public String getUrlBgs() {
+        return urlBgs;
     }
 
-    public void setLyrics(String lyrics) {
-        this.lyrics = lyrics;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
+    public void setUrlBgs(String urlBgs) {
+        this.urlBgs = urlBgs;
     }
 }

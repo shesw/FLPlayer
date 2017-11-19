@@ -10,12 +10,16 @@ import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.SystemClock;
+import android.util.Log;
 
 import com.bumptech.glide.Glide;
 import com.compassl.anji.songs_ssw.MainActivity;
 import com.compassl.anji.songs_ssw.R;
+import com.compassl.anji.songs_ssw.db.SongInfo;
 import com.compassl.anji.songs_ssw.util.HttpUtil;
+import com.compassl.anji.songs_ssw.util.InitialTool;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,7 +43,7 @@ public class UpdateBackgroundPic extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        loadNewSong();
+        hasNewSong();
         loadBingPic();
         AlarmManager manager = (AlarmManager) getSystemService(ALARM_SERVICE);
         int anHour = 8 * 60 * 60 * 1000;
@@ -51,22 +55,71 @@ public class UpdateBackgroundPic extends Service {
         return super.onStartCommand(intent,flags,startId);
     }
 
+    private void hasNewSong(){
+        String url = "http://10.0.2.2:90/song_info_1.txt";
+        HttpUtil.sendOkHttpRequest(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+            }
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+                String str = response.body().string().substring(1,3);
+                count = Integer.parseInt(str);
+                int count_this = prefs.getInt("song_count",-1);
+                if (count != count_this){
+                    //prefs.edit().putInt("song_count",count).apply();
+                    loadNewSong();
+                }
+            }
+        });
+    }
+    private int count;
+    //private SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+    //更新歌曲列表
     private void loadNewSong() {
+        final String downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
+      //  SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+     //   final int SONG_ACCOUNT = prefs.getInt("song_count",-1);
+        final int SONG_ACCOUNT = count;
         String url = "http://10.0.2.2:90/song_info.txt";
         HttpUtil.sendOkHttpRequest(url, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
             }
-
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                String savePath = getFilesDir().getAbsolutePath()+"/FLMusic/song_info.txt";
-                byte[] buf = response.body().bytes();
-                InputStream is = new FileInputStream(savePath);
-                if (is.available() != buf.length){
-                    Intent intent = new Intent("notification_button");
-                    intent.putExtra("noti",10);
-                    sendBroadcast(intent);
+                //完成配置文件的下载
+                InitialTool.loadInfo(UpdateBackgroundPic.this,downloadPath,response.body().string());
+                //完成图片文件下载
+                for (int i = 1;i<=SONG_ACCOUNT;i++){
+                    final String i_str = i>9?""+i:"0"+i;
+                    final String imgPath = downloadPath+"img/s"+i_str+".jpg";
+                    Log.d("imgPath", "dp: "+imgPath);
+                    File file = new File(imgPath);
+                    if (file.exists()){
+                        continue;
+                    }
+                    final int ii = i;
+                    Log.d("MAAA", "onResponse: "+imgPath);
+                    HttpUtil.sendOkHttpRequest("http://10.0.2.2:90/song_img/s" + i_str + ".jpg", new Callback() {
+                        @Override
+                        public void onFailure(Call call, IOException e) {
+                        }
+                        @Override
+                        public void onResponse(Call call, Response response) throws IOException {
+                            byte[] buf1 = response.body().bytes();
+                            OutputStream os1 = new FileOutputStream(imgPath);
+                            os1.write(buf1);
+                            os1.flush();
+                            os1.close();
+                            if (ii == SONG_ACCOUNT){
+                                Intent intent = new Intent("notification_button");
+                                intent.putExtra("noti",10);
+                                sendBroadcast(intent);
+                            }
+                        }
+                    });
                 }
             }
         });

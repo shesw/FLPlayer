@@ -8,3 +8,11 @@
 [i!07][n!摇篮曲][m!http://10.0.2.2:90/song_mp3/摇篮曲.mp3][l!http://10.0.2.2:90/song_lyc/摇篮曲.txt][b!http://10.0.2.2:90/song_bgs/摇篮曲.txt]
 [i!08][n!寻常][m!http://10.0.2.2:90/song_mp3/寻常.mp3][l!http://10.0.2.2:90/song_lyc/寻常.txt][b!http://10.0.2.2:90/song_bgs/寻常.txt]
 [i!09][n!没有你的夏天][m!http://10.0.2.2:90/song_mp3/没有你的夏天.mp3][l!http://10.0.2.2:90/song_lyc/没有你的夏天.txt][b!http://10.0.2.2:90/song_bgs/没有你的夏天.txt]
+
+
+
+
+
+
+
+

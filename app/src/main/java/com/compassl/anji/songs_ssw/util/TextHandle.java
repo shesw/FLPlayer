@@ -10,6 +10,9 @@ import android.util.Log;
 import android.util.Size;
 
 import com.compassl.anji.songs_ssw.R;
+import com.compassl.anji.songs_ssw.db.SongInfo;
+
+import org.litepal.crud.DataSupport;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,6 +22,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,34 +37,61 @@ import okhttp3.Response;
  */
 public class TextHandle {
 
-    //根据string内容获得具体文件的下载地址
-    public static String[] getWholeFilePath(Context context,int id){
 
-        String line = "";
-        try {
-            InputStream is = new FileInputStream(context.getFilesDir().getAbsolutePath()+"/FLMusic/song_info.txt");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            while (id-- >0){
-                reader.readLine();
-            }
-            line = reader.readLine();
-            is.close();
-            reader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+    /**
+     * 解析配置文件的行内容，返回：
+     * 1.歌名
+     * 2.urlMp3
+     * 3.urlLyc
+     * 4.urlBgs
+     */
+    public static String[] handleInfo(String line){
+        int n_index = line.indexOf("[n!")+3;
         int m_index = line.indexOf("[m!")+3;
         int l_index = line.indexOf("[l!")+3;
         int b_index = line.indexOf("[b!")+3;
-
+        String name = line.substring(n_index,line.indexOf("]",n_index));
         String urlMp3 = line.substring(m_index,line.indexOf("]",m_index));
         String urlLyc = line.substring(l_index,line.indexOf("]",l_index));
         String urlBgs = line.substring(b_index,line.indexOf("]",b_index));
-
-        return new String[]{urlMp3,urlLyc,urlBgs};
-
+        return new String[]{name,urlMp3,urlLyc,urlBgs};
     }
+
+
+    //在新建文件夹内，根据id内容,从数据库中获得具体文件的下载地址
+    public static String[] getWholeFilePath(int id){
+        List<SongInfo> infos = DataSupport.select("song_name","urlMp3","urlLyc","urlBgs")
+                .where("song_id=?",id+"")
+                .find(SongInfo.class);
+        String urlMp3 = infos.get(0).getUrlMp3();
+        String urlLyc = infos.get(0).getUrlLyc();
+        String urlBgs = infos.get(0).getUrlMp3();
+        return new String[]{urlMp3,urlLyc,urlBgs};
+    }
+
+//    //在新建文件夹内，根据id内容获得具体文件的下载地址
+//    public static String[] getWholeFilePath(Context context,int id){
+//        String line = "";
+//        try {
+//            InputStream is = new FileInputStream(context.getFilesDir().getAbsolutePath()+"/FLMusic/song_info.txt");
+//            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+//            while (id-- >0){
+//                reader.readLine();
+//            }
+//            line = reader.readLine();
+//            is.close();
+//            reader.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        int m_index = line.indexOf("[m!")+3;
+//        int l_index = line.indexOf("[l!")+3;
+//        int b_index = line.indexOf("[b!")+3;
+//        String urlMp3 = line.substring(m_index,line.indexOf("]",m_index));
+//        String urlLyc = line.substring(l_index,line.indexOf("]",l_index));
+//        String urlBgs = line.substring(b_index,line.indexOf("]",b_index));
+//        return new String[]{urlMp3,urlLyc,urlBgs};
+//    }
 
     public static String getLrcInfo(String allLrc){
         //Matcher m = Pattern.compile("\\[(\\d{1,2}):(\\d{1,2}).(\\d{1,2})\\]").matcher(allLrc);
