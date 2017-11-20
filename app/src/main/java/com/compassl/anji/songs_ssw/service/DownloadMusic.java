@@ -37,14 +37,19 @@ public class DownloadMusic extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        int index = intent.getIntExtra("id",-1);
-        String name = intent.getStringExtra("name");
+        final int index = intent.getIntExtra("id",-1);
+        final String name = intent.getStringExtra("name");
         if (index==-1){
             return super.onStartCommand(intent,flags,startId);
         }
         //下载地址
-        String[] str3 = TextHandle.getWholeFilePath(index);
-        download(index,name,str3);
+        final String[] str3 = TextHandle.getWholeFilePath(index);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                download(index,name,str3);
+            }
+        }).start();
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -114,18 +119,26 @@ public class DownloadMusic extends Service {
             e.printStackTrace();
         }
 
-        Intent intent1 = new Intent("notification_button");
-        intent1.putExtra("noti",9);
-        intent1.putExtra("index",index);
-        sendBroadcast(intent1);
+        DownloadBinder.listener.closeProgress(index);
         stopSelf();
 
     }
 
+    public interface MyDownloadListener{
+        void closeProgress(int index);
+    }
+
+    public static class DownloadBinder extends Binder{
+        private static MyDownloadListener listener;
+        public void setMyDownloadListener(MyDownloadListener listener){
+            DownloadBinder.listener = listener;
+        }
+    }
+    private DownloadBinder mBinder = new DownloadBinder();
+
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+        return mBinder;
     }
 
     @Override

@@ -13,17 +13,27 @@ public class SongInfo extends DataSupport{
     private String urlMp3;
     private String urlLyc;
     private String urlBgs;
+    private String urlImg;
+
+    public String getUrlImg() {
+        return urlImg;
+    }
+
+    public void setUrlImg(String urlImg) {
+        this.urlImg = urlImg;
+    }
 
     public SongInfo() {
     }
 
-    public SongInfo(int id, int song_id, String song_name, String urlMp3, String urlLyc, String urlBgs) {
+    public SongInfo(int id, int song_id, String song_name, String urlMp3, String urlLyc, String urlBgs,String urlImg) {
         this.id = id;
         this.song_id = song_id;
         this.song_name = song_name;
         this.urlMp3 = urlMp3;
         this.urlLyc = urlLyc;
         this.urlBgs = urlBgs;
+        this.urlImg = urlImg;
     }
 
     public int getSong_id() {

@@ -50,22 +50,24 @@ public class TextHandle {
         int m_index = line.indexOf("[m!")+3;
         int l_index = line.indexOf("[l!")+3;
         int b_index = line.indexOf("[b!")+3;
+        int p_index = line.indexOf("[p!")+3;
         String name = line.substring(n_index,line.indexOf("]",n_index));
         String urlMp3 = line.substring(m_index,line.indexOf("]",m_index));
         String urlLyc = line.substring(l_index,line.indexOf("]",l_index));
         String urlBgs = line.substring(b_index,line.indexOf("]",b_index));
-        return new String[]{name,urlMp3,urlLyc,urlBgs};
+        String urlImg = line.substring(p_index,line.indexOf("]",p_index));
+        return new String[]{name,urlMp3,urlLyc,urlBgs,urlImg};
     }
 
 
     //在新建文件夹内，根据id内容,从数据库中获得具体文件的下载地址
     public static String[] getWholeFilePath(int id){
-        List<SongInfo> infos = DataSupport.select("song_name","urlMp3","urlLyc","urlBgs")
+        List<SongInfo> infos = DataSupport.select("urlMp3","urlLyc","urlBgs")
                 .where("song_id=?",id+"")
                 .find(SongInfo.class);
         String urlMp3 = infos.get(0).getUrlMp3();
         String urlLyc = infos.get(0).getUrlLyc();
-        String urlBgs = infos.get(0).getUrlMp3();
+        String urlBgs = infos.get(0).getUrlBgs();
         return new String[]{urlMp3,urlLyc,urlBgs};
     }
 

@@ -59,6 +59,15 @@
         </android.support.v7.widget.CardView>
     </ViewFlipper>
 
+    <ProgressBar
+        android:id="@+id/pb_download"
+        android:visibility="gone"
+        android:layout_marginTop="1dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        style="?android:attr/progressBarStyleSmall"/>
+
     <android.support.v7.widget.CardView
         android:layout_marginTop="10dp"
         android:layout_marginLeft="15dp"

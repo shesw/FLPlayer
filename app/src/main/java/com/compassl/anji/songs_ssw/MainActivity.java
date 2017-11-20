@@ -18,6 +18,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -32,13 +33,16 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.RemoteViews;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -111,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView tv_display_time_total;
     private ImageView iv_background;
     private ImageButton ib_refresh_list;
+    private ProgressBar pb_download;
     private MyLrcView lv_ly;
     private MediaPlayer mediaPlayer = new MediaPlayer();
     private NotiReceiver receiver;
@@ -194,12 +199,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 case 3:
                     onDestroy();
                     break;
-                case 9:
-                    int index_downloaded = intent.getIntExtra("index",-1);
-                    if (index_downloaded!=-1){
-                        Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded-1).getName()+" downloaded",Toast.LENGTH_SHORT).show();
-                    }
-                    break;
                 case 10:
                     hasNew = true;
                     ib_refresh_list.setImageResource(R.drawable.refresh_list_new);
@@ -210,7 +209,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
+    private SharedPreferences prefs;
 
     /**
      * @param savedInstanceState
@@ -245,9 +244,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sb_song_play_progress = (SeekBar) findViewById(R.id.sb_song_progress);
         iv_background = (ImageView) findViewById(R.id.iv_background);
         ib_refresh_list = (ImageButton) findViewById(R.id.ib_refresh_songList);
+        pb_download = (ProgressBar) findViewById(R.id.pb_download);
 
         //设置背景图案
-        SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+        prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
         int pic_id = prefs.getInt("id",-1);
         if (pic_id!=-1){
             String bingPic = prefs.getString("pic"+pic_id,null);
@@ -273,6 +273,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             @Override
                             public void run() {
                                 SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+                                prefs.edit().putInt("id",7).apply();
                                 int pic_id = prefs.getInt("id",-1);
                                 int id_use;
                                 if (pic_id!=-1 || pic_id == 7){
@@ -281,8 +282,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     id_use = pic_id+1;
                                 }
                                 prefs.edit().putInt("id",id_use).apply();
-                                String bingPic = prefs.getString("pic"+id_use,null);
-                                Glide.with(MainActivity.this).load(bingPic).into(iv_background);
+                                String str1 = id_use+"";
+                                String bingPic = prefs.getString(str1,null);
+                                if ( bingPic!=null && !"".equals(bingPic)){
+                                    Glide.with(MainActivity.this).load(bingPic).into(iv_background);
+                                }
                                 //启动更新背景图片服务
                                 Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
                                 startService(intent);
@@ -293,9 +297,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }).start();
             }
         });
-        //启动更新背景图片服务
-        Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
-        startService(intent);
+//        //启动更新背景图片服务
+//        Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
+//        startService(intent);
         //设置通知栏广播监听事件
         receiver = new NotiReceiver();
         filter = new IntentFilter();
@@ -434,6 +438,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (SONG_ACCOUNT>0) {
             changeSong(1);
             createNotification();
+        }else {
+            onBackPressed();
         }
 
     }
@@ -449,16 +455,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     //方法：加载RecyclerView
     private void initRecyclerView() {
-        songList=InitialTool.initSongChoose(MainActivity.this);
+        songList = InitialTool.initSongChoose(MainActivity.this);
         SONG_ACCOUNT = songList.size();
-        StaggeredGridLayoutManager manager = new StaggeredGridLayoutManager(3,StaggeredGridLayoutManager.VERTICAL);
+        StaggeredGridLayoutManager manager = new StaggeredGridLayoutManager(3, StaggeredGridLayoutManager.VERTICAL);
         rv.setLayoutManager(manager);
         rv.setHasFixedSize(true);
         adapter = new RvAdapter(songList);
         rv.setAdapter(adapter);
         adapter.setOnItemClickListenerRV(this);
-        //是否已经下载完成的数组初始化
-        Toast.makeText(MainActivity.this,"ok",Toast.LENGTH_SHORT).show();
     }
     //方法：转换歌曲
     private void changeSong(int i) {
@@ -725,11 +729,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.bt_download:
                 boolean isn = isNetWorkAvailable();
                 boolean isd = isDownloaded(index)[0];
-                if (isn && !isd){
-                    Intent intent = new Intent(MainActivity.this, DownloadMusic.class);
-                    intent.putExtra("id",index);
-                    intent.putExtra("name",songList.get(index-1).getName());
-                    startService(intent);
+                if (isn && !isd ){
+                    if (isDownloadFinish){
+                        showDownloadProgress();
+                        Intent intent = new Intent(MainActivity.this, DownloadMusic.class);
+                        intent.putExtra("id",index);
+                        intent.putExtra("name",songList.get(index-1).getName());
+                        startService(intent);
+                        bindService(intent,conn,BIND_AUTO_CREATE);
+                    }else {
+                        Toast.makeText(MainActivity.this,"is downloading, please wait",Toast.LENGTH_SHORT).show();
+                    }
                 }else if (isd){
                     Toast.makeText(MainActivity.this,"already downloaded",Toast.LENGTH_SHORT).show();
                 }else {
@@ -740,21 +750,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 drawerLayout.openDrawer(GravityCompat.START);
                 break;
             case R.id.ib_refresh_songList:
-                if (hasNew){
-                    hasNew = false;
+                //if (hasNew){
+                    int song_count_new = prefs.getInt("song_count",-1);
+                    prefs.edit().putInt("song_count_show",song_count_new).apply();
+                //    hasNew = false;
                     ib_refresh_list.setImageResource(R.drawable.refresh_list);
                     initRecyclerView();
-                }else {
-                    Toast.makeText(MainActivity.this,"no new song",Toast.LENGTH_SHORT).show();
-                }
+                    Toast.makeText(MainActivity.this,"ok",Toast.LENGTH_SHORT).show();
+//                }else {
+//                    Toast.makeText(MainActivity.this,"no new song",Toast.LENGTH_SHORT).show();
+//                }
                 break;
             default:
                 break;
         }
     }
-
-
-
+    private boolean isDownloadFinish = true;
+    private void showDownloadProgress(){
+        isDownloadFinish = false;
+        pb_download.setVisibility(View.VISIBLE);
+    }
+    private void closeDownloadProgress(int index_downloaded){
+        isDownloadFinish = true;
+        Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded-1).getName()+" downloaded",Toast.LENGTH_SHORT).show();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                pb_download.setVisibility(View.GONE);
+            }
+        });
+    }
+    private ServiceConnection conn = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            DownloadMusic.DownloadBinder binder = (DownloadMusic.DownloadBinder) service;
+            binder.setMyDownloadListener(new DownloadMusic.MyDownloadListener() {
+                @Override
+                public void closeProgress(int index_downloaded) {
+                    closeDownloadProgress(index_downloaded);
+                }
+            });
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {}
+    } ;
 
     private void playNext() {
         if (index==SONG_ACCOUNT){
@@ -764,6 +803,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         if (!mediaPlayer.isPlaying()) {
             mediaPlayer.start();
+            bt_play_pause.setImageResource(R.drawable.pause);
         }
         createNotification();
     }
@@ -789,6 +829,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         if (!mediaPlayer.isPlaying()){
             mediaPlayer.start();
+            bt_play_pause.setImageResource(R.drawable.pause);
         }
         createNotification();
     }

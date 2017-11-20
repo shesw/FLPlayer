@@ -34,7 +34,7 @@ public class InitialTool {
     public static List<Song> initSongChoose(Context context){
         SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
         List<Song> songList = new ArrayList<>();
-        int total = prefs.getInt("song_count",9);
+        int total = prefs.getInt("song_count_show",9);
         for (int i = 1;i<=total;i++){
             List<SongInfo> name1 = DataSupport.select("song_name").where("song_id = ?",i+"").find(SongInfo.class);
             String name = name1.get(0).getSong_name();
@@ -48,38 +48,22 @@ public class InitialTool {
     }
 
     public static void loadInfo(Context context, String downloadPath,String string){
-        int song_count = 0;
+        int song_count;
         try {
             BufferedReader bufferedReader;
+            SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
+            //从asset加载
             if (string == null){
                 bufferedReader = new BufferedReader(new InputStreamReader(context.getAssets().open("song_info.txt")));
-            }
-            else {
-                bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(string.getBytes("UTF-8"))));
-            }
-
-            String song_count_str = bufferedReader.readLine();
-            String song_count_str_dec = song_count_str.substring(song_count_str.indexOf("[c!")+3,
-                    song_count_str.indexOf("]"));
-            Log.d("IT", "str: "+song_count_str_dec);
-            song_count = Integer.parseInt(song_count_str_dec);
-            SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
-            prefs.edit().putInt("song_count",song_count).apply();
-            for (int i = 1;i<=song_count;i++){
-                String str = bufferedReader.readLine();
-                String[] str4 = TextHandle.handleInfo(str);
-                SongInfo songInfo = new SongInfo(i,i,str4[0],str4[1],str4[2],str4[3]);
-                songInfo.save();
-            }
-            bufferedReader.close();
-
-            //从asset加载
-            if (string==null){
+                String song_count_str = bufferedReader.readLine();
+                String song_count_str_dec = song_count_str.substring(song_count_str.indexOf("[c!")+3,
+                        song_count_str.indexOf("]"));
+                song_count = Integer.parseInt(song_count_str_dec);
+                prefs.edit().putInt("song_count_show",song_count).apply();
                 //判断有无图片文件夹，若没有则创建
                 hasImg(downloadPath+"img/");
                 for (int i = 1;i<=song_count;i++){
                     String index_str = i>9?i+"":"0"+i;
-                    //InputStream is1 = new FileInputStream("file:///android_asset/img/s"+index_str+".jpg");
                     InputStream is1 = context.getAssets().open("img/s"+index_str+".jpg");
                     byte[] buf1 = new byte[is1.available()];
                     is1.read(buf1);
@@ -91,12 +75,31 @@ public class InitialTool {
                     os1.close();
                 }
             }
+            else {
+                bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(string.getBytes("UTF-8"))));
+                song_count = prefs.getInt("song_count",-1);
+                bufferedReader.readLine();
+            }
+
+            for (int i = 1;i<=song_count;i++){
+                String str = bufferedReader.readLine();
+                String[] str5 = TextHandle.handleInfo(str);
+                SongInfo songInfo = new SongInfo(i,i,str5[0],str5[1],str5[2],str5[3],str5[4]);
+                List<SongInfo> list = DataSupport.select("song_id").where("song_id=?",i+"").find(SongInfo.class);
+                if (list.size()!=0){
+                    songInfo.updateAll();
+                }else {
+                    songInfo.save();
+                }
+            }
+            bufferedReader.close();
+
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-        SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
-        prefs.edit().putInt("song_count",song_count).apply();
+//        SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
+//        prefs.edit().putInt("song_count",song_count).apply();
        // return song_count;
     }
 
