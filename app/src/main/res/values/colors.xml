@@ -11,4 +11,6 @@
     <color name="lrc_timeline_color_m">#809E9E9E</color>
     <color name="lrc_timeline_text_color_m">#F8BBD0</color>
 
+    <color name="transparent">#0000</color>
+
 </resources>

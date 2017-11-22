@@ -1,23 +1,17 @@
-package com.compassl.anji.songs_ssw.util;
+package com.compassl.anji.flsts.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.ProviderInfo;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.compassl.anji.songs_ssw.MainActivity;
-import com.compassl.anji.songs_ssw.R;
-import com.compassl.anji.songs_ssw.Song;
-import com.compassl.anji.songs_ssw.db.SongInfo;
+import com.compassl.anji.flsts.Song;
+import com.compassl.anji.flsts.db.SongInfo;
 
-import org.litepal.LitePal;
 import org.litepal.crud.DataSupport;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,7 +41,7 @@ public class InitialTool {
         return songList;
     }
 
-    public static void loadInfo(Context context, String downloadPath,String string){
+    public static void loadInfo(Context context, String downloadPath,String string,int count){
         int song_count;
         try {
             BufferedReader bufferedReader;
@@ -74,10 +68,9 @@ public class InitialTool {
                     os1.flush();
                     os1.close();
                 }
-            }
-            else {
+            }else {
                 bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(string.getBytes("UTF-8"))));
-                song_count = prefs.getInt("song_count",-1);
+                song_count = count;
                 bufferedReader.readLine();
             }
 
@@ -106,8 +99,7 @@ public class InitialTool {
     private static void hasImg(String path){
         File file = new File(path);
         if (!file.exists()){
-            boolean is = file.mkdirs();
-            Log.d("aaa", is+"");
+            file.mkdirs();
         }
     }
 

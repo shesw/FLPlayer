@@ -7,7 +7,7 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:src="@mipmap/zly"/>
+        android:src="@mipmap/flsts"/>
 
     <TextView
         android:id="@+id/tv_fore_song_name"

@@ -1,14 +1,9 @@
-package com.compassl.anji.songs_ssw;
+package com.compassl.anji.flsts;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
-import android.view.animation.AnimationUtils;
-
-import com.compassl.anji.songs_ssw.MainActivity;
 
 import me.wcy.lrcview.LrcView;
-
-import static com.compassl.anji.songs_ssw.R.id.vf_ly_bs;
 
 /**
  * Created by Administrator on 2017/11/2.

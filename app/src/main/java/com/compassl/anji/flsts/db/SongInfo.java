@@ -1,4 +1,4 @@
-package com.compassl.anji.songs_ssw.db;
+package com.compassl.anji.flsts.db;
 
 import org.litepal.crud.DataSupport;
 

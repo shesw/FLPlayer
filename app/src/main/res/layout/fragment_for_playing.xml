@@ -22,7 +22,7 @@
             app:cardElevation="5dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-            <com.compassl.anji.songs_ssw.MyTextView
+            <com.compassl.anji.flsts.MyTextView
                 android:textColor="#fff"
                 android:id="@+id/tv_song_info"
                 android:layout_width="match_parent"
@@ -36,7 +36,7 @@
             app:cardElevation="5dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-            <com.compassl.anji.songs_ssw.MyLrcView
+            <com.compassl.anji.flsts.MyLrcView
                 android:id="@+id/lv_ly"
                 app:lrcCurrentTextColor="#fff"
                 app:lrcNormalTextColor="#aaa"
@@ -50,7 +50,7 @@
             app:cardElevation="5dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-            <com.compassl.anji.songs_ssw.MyTextView
+            <com.compassl.anji.flsts.MyTextView
                 android:textColor="#fff"
                 android:id="@+id/tv_bacground_story_view"
                 android:layout_width="match_parent"

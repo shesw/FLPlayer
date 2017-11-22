@@ -1,4 +1,4 @@
-package com.compassl.anji.songs_ssw.util;
+package com.compassl.anji.flsts.util;
 
 /**
  * Created by Administrator on 2017/11/1.

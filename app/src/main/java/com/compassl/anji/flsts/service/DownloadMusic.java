@@ -1,29 +1,18 @@
-package com.compassl.anji.songs_ssw.service;
+package com.compassl.anji.flsts.service;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Binder;
-import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.compassl.anji.songs_ssw.MainActivity;
-import com.compassl.anji.songs_ssw.util.HttpUtil;
-import com.compassl.anji.songs_ssw.util.TextHandle;
+import com.compassl.anji.flsts.util.TextHandle;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;

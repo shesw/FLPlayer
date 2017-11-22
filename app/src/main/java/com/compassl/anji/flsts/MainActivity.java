@@ -1,4 +1,4 @@
-package com.compassl.anji.songs_ssw;
+package com.compassl.anji.flsts;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -11,20 +11,16 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.content.res.AssetFileDescriptor;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.Binder;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.view.GravityCompat;
@@ -33,13 +29,13 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutCompat;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.Log;
-import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -50,26 +46,21 @@ import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import com.bumptech.glide.Glide;
-import com.compassl.anji.songs_ssw.db.SongInfo;
-import com.compassl.anji.songs_ssw.service.DownloadMusic;
-import com.compassl.anji.songs_ssw.service.UpdateBackgroundPic;
-import com.compassl.anji.songs_ssw.util.HttpUtil;
-import com.compassl.anji.songs_ssw.util.InitialTool;
-import com.compassl.anji.songs_ssw.util.TextHandle;
-import com.compassl.anji.songs_ssw.util.MathUtil;
-
-import org.litepal.LitePal;
-import org.litepal.crud.DataSupport;
+import com.compassl.anji.flsts.service.DownloadMusic;
+import com.compassl.anji.flsts.service.EarAndNewSongListeningService;
+import com.compassl.anji.flsts.service.UpdateBackgroundPic;
+import com.compassl.anji.flsts.util.HttpUtil;
+import com.compassl.anji.songs_ssw.R;
+import com.compassl.anji.flsts.util.InitialTool;
+import com.compassl.anji.flsts.util.TextHandle;
+import com.compassl.anji.flsts.util.MathUtil;
+import com.tencent.mm.sdk.openapi.IWXAPI;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.annotation.ElementType;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -77,12 +68,12 @@ import java.util.Random;
 import me.wcy.lrcview.LrcView;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener,RvAdapter.OnItemClickListenerRV{
     private static final String TAG = "MA";
+    private static final String APP_ID = "";
+    private IWXAPI wxapi;
 
     private int SONG_ACCOUNT=0;
     private static final int MODE_LIST_LOOP = 1;
@@ -103,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ImageButton bt_next;
     private ImageButton bt_mode;
     private ImageButton bt_download;
+    private ImageButton bt_share_to_wx;
     private FloatingActionButton fbt_home;
     private DrawerLayout drawerLayout;
     private MyTextView tv_bs;
@@ -124,7 +116,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private NotificationManager manager;
     private NotificationCompat.Builder builder;
     private AudioManager audioManager;
-    //private EarReceiver receiver_ear;
     private String downloadPath;
 
     private AudioManager.OnAudioFocusChangeListener onAudioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
@@ -134,12 +125,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
-//    public EarReceiver earReceiver = new EarReceiver(){
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//            changPP();
-//        }
-//    };
 
     private static final int SEEK_BAR_UPDATE = 1;
     private static final int GET_LY = 2;
@@ -187,6 +172,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onReceive(Context context, Intent intent) {
             switch (intent.getIntExtra("noti",-1)){
+                //通知栏广播
                 case 0:
                     playPre();
                     break;
@@ -199,9 +185,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 case 3:
                     onDestroy();
                     break;
-                case 10:
-                    hasNew = true;
-                    ib_refresh_list.setImageResource(R.drawable.refresh_list_new);
+                //耳机监听广播
+                case 9:
+                    Log.d("EAR", "EAR");
+                    changPP();
                     break;
                 default:
                     break;
@@ -210,6 +197,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private SharedPreferences prefs;
+
+    private ServiceConnection conn_en = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            EarAndNewSongListeningService.UBPBinder binder = (EarAndNewSongListeningService.UBPBinder) service;
+            binder.setOnUpdateFinishListener(new EarAndNewSongListeningService.OnUpdateFinishListener() {
+                @Override
+                public void updateUI() {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            hasNew = true;
+                            ib_refresh_list.setImageResource(R.drawable.refresh_list_new);
+                        }
+                    });
+                }
+            });
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+        }
+    };
 
     /**
      * @param savedInstanceState
@@ -225,6 +234,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             getWindow().setStatusBarColor(Color.TRANSPARENT);
         }
         setContentView(R.layout.activity_main);
+        //音乐下载地址
+        downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
 
         //加载各类控件
         vf_ly_bs = (ViewFlipper) findViewById(R.id.vf_ly_bs);
@@ -233,6 +244,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_next = (ImageButton) findViewById(R.id.bt_next);
         bt_mode = (ImageButton) findViewById(R.id.bt_mode);
         bt_download = (ImageButton) findViewById(R.id.bt_download);
+        bt_share_to_wx = (ImageButton) findViewById(R.id.bt_share_to_wx);
         fbt_home = (FloatingActionButton) findViewById(R.id.fbt_menu);
         drawerLayout = (DrawerLayout) findViewById(R.id.dl_choose_song);
         tv_bs = (MyTextView) findViewById(R.id.tv_bacground_story_view);
@@ -248,20 +260,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //设置背景图案
         prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
-        int pic_id = prefs.getInt("id",-1);
-        if (pic_id!=-1){
-            String bingPic = prefs.getString("pic"+pic_id,null);
-            if (bingPic != null){
-                Glide.with(this).load(bingPic).into(iv_background);
+        final int pic_id = prefs.getInt("id",-1);
+        if (pic_id == 0){
+           // Glide.with(MainActivity.this).load(BitmapFactory.decodeResource(getResources(),R.drawable.background_pic_default));
+        }else if (pic_id!=-1){
+            String savePath = downloadPath+"backgroundPic/B"+pic_id+".txt";
+            try {
+                InputStream is = new FileInputStream(savePath);
+                byte[] buf = new byte[is.available()];
+                is.read(buf);
+                is.close();
+                final String url = new String(buf);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(MainActivity.this).load(url).into(iv_background);
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 
+
         //设置背景图片的刷新
         final SwipeRefreshLayout layout_fresh = (SwipeRefreshLayout) findViewById(R.id.layout_fresh);
+
+        //启动新歌更新服务
+        Intent intent_en = new Intent(MainActivity.this,EarAndNewSongListeningService.class);
+        startService(intent_en);
+        bindService(intent_en,conn_en,BIND_AUTO_CREATE);
+
+        //启动更新背景图片服务
+        Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
+        startService(intent);
         layout_fresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                new Thread(new Runnable() {
+                Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         try {
@@ -269,37 +305,52 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
-                                prefs.edit().putInt("id",7).apply();
-                                int pic_id = prefs.getInt("id",-1);
-                                int id_use;
-                                if (pic_id!=-1 || pic_id == 7){
-                                    id_use = 0;
-                                }else {
-                                    id_use = pic_id+1;
+                        int id_current = prefs.getInt("id",-1);
+                        int id_use;
+                        Random random = new Random();
+                        id_use = random.nextInt(8);
+                        File file = new File(downloadPath+"B"+id_use+".txt");
+                        if (!file.exists()){
+                            id_use = 0;
+                        }
+                        if (id_use == 0){
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    layout_fresh.setRefreshing(false);
+                                    Glide.with(MainActivity.this).load(R.drawable.background_pic_default).into(iv_background);
                                 }
-                                prefs.edit().putInt("id",id_use).apply();
-                                String str1 = id_use+"";
-                                String bingPic = prefs.getString(str1,null);
-                                if ( bingPic!=null && !"".equals(bingPic)){
-                                    Glide.with(MainActivity.this).load(bingPic).into(iv_background);
-                                }
-                                //启动更新背景图片服务
-                                Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
-                                startService(intent);
-                                layout_fresh.setRefreshing(false);
+                            });
+                        }else {
+                            String savePath = downloadPath+"backgroundPic/B"+id_use+".txt";
+                            try {
+                                InputStream is = new FileInputStream(savePath);
+                                byte[] buf = new byte[is.available()];
+                                is.read(buf);
+                                is.close();
+                                final String url = new String(buf);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        layout_fresh.setRefreshing(false);
+                                        Glide.with(MainActivity.this).load(url).into(iv_background);
+                                    }
+                                });
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
-                        });
+                        }
+                        prefs.edit().putInt("id",id_use).apply();
                     }
-                }).start();
+                });
+                thread.start();
+
             }
         });
-//        //启动更新背景图片服务
-//        Intent intent = new Intent(MainActivity.this, UpdateBackgroundPic.class);
-//        startService(intent);
+        //启动更新背景图片服务
+        Intent intent_ubp = new Intent(MainActivity.this, UpdateBackgroundPic.class);
+        startService(intent_ubp);
+
         //设置通知栏广播监听事件
         receiver = new NotiReceiver();
         filter = new IntentFilter();
@@ -319,6 +370,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bt_play_pause.setOnClickListener(this);
         bt_next.setOnClickListener(this);
         bt_mode.setOnClickListener(this);
+        bt_share_to_wx.setOnClickListener(this);
         bt_download.setOnClickListener(this);
         fbt_home.setOnClickListener(this);
         ib_refresh_list.setOnClickListener(this);
@@ -422,11 +474,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }).start();
 
-        //音乐下载地址
-        downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
         //判断有无配置文件，若没有，则创建
+        int count = prefs.getInt("song_count_show",9);
         if (!hasSongInfoText()) {
-            InitialTool.loadInfo(MainActivity.this, downloadPath, null);
+            InitialTool.loadInfo(MainActivity.this, downloadPath, null,count);
         }
         //加载拉动菜单中recyclerview布局的适配器
         initRecyclerView();
@@ -442,6 +493,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             onBackPressed();
         }
 
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (prefs.getInt("song_count",-1)!=prefs.getInt("song_count_show",-1)){
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            hasNew = true;
+                            ib_refresh_list.setImageResource(R.drawable.refresh_list_new);
+                        }
+                    });
+                }
+            }
+        }).start();
     }
 
     private boolean hasSongInfoText() {
@@ -475,6 +540,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         if (MODE == MODE_PLAY_BY_ORDER && index == 1){
             onDestroy();
+            return;
         }
         //加载音乐、歌词和文案
         if (!setMLB()){
@@ -620,7 +686,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         builder = new NotificationCompat.Builder(this);
         builder.setWhen(System.currentTimeMillis())
                 .setContentTitle("生生忘").setContentText(songList.get(index-1).getName())
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.mipmap.flsts)
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(),R.drawable.home))
                 .setContentIntent(pi)
                 .setContent(getRemoteView())
@@ -746,36 +812,83 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Toast.makeText(MainActivity.this,"no network",Toast.LENGTH_SHORT).show();
                 }
                 break;
+            case R.id.bt_share_to_wx:
+                share_to_wx();
+                break;
             case R.id.fbt_menu:
                 drawerLayout.openDrawer(GravityCompat.START);
                 break;
             case R.id.ib_refresh_songList:
-                //if (hasNew){
+                if (hasNew){
                     int song_count_new = prefs.getInt("song_count",-1);
                     prefs.edit().putInt("song_count_show",song_count_new).apply();
-                //    hasNew = false;
+                    hasNew = false;
                     ib_refresh_list.setImageResource(R.drawable.refresh_list);
                     initRecyclerView();
                     Toast.makeText(MainActivity.this,"ok",Toast.LENGTH_SHORT).show();
-//                }else {
-//                    Toast.makeText(MainActivity.this,"no new song",Toast.LENGTH_SHORT).show();
-//                }
+               }else {
+                   Toast.makeText(MainActivity.this,"no new song",Toast.LENGTH_SHORT).show();
+               }
                 break;
             default:
                 break;
         }
     }
+
+    //private AlertDialog dialog;
+    private void share_to_wx() {
+        //wxapi = WXAPIFactory.createWXAPI(MainActivity.this,APP_ID);
+        //启动微信
+        //wxapi.openWXApp();
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this,R.style.AlertDialog);
+        LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+        //
+        final AlertDialog dialog = builder.create();
+        View view = inflater.inflate(R.layout.wx_choose_dialog,null);
+        dialog.setView(view,0,0,0,0);
+        dialog.setIcon(R.drawable.pause);
+        Window win = dialog.getWindow();
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.x = 0;
+        params.y = 300;
+        if (win != null) {
+            win.setAttributes(params);
+        }
+        dialog.show();
+        ImageButton ib_hy = (ImageButton) view.findViewById(R.id.ib_hy);
+        ib_hy.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                Toast.makeText(MainActivity.this,"hy",Toast.LENGTH_SHORT).show();
+            }
+        });
+        ImageButton ib_pyq = (ImageButton) view.findViewById(R.id.ib_pyq);
+        ib_pyq.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                Toast.makeText(MainActivity.this,"pyq",Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+//    //为请求生成一个唯一的标识
+//    private String buildTransaction(final String type){
+//        return (type == null)?String.valueOf(System.currentTimeMillis()):type+ System.currentTimeMillis();
+//    }
+
     private boolean isDownloadFinish = true;
     private void showDownloadProgress(){
         isDownloadFinish = false;
         pb_download.setVisibility(View.VISIBLE);
     }
-    private void closeDownloadProgress(int index_downloaded){
+    private void closeDownloadProgress(final int index_downloaded){
         isDownloadFinish = true;
-        Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded-1).getName()+" downloaded",Toast.LENGTH_SHORT).show();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                Toast.makeText(MainActivity.this,"music "+songList.get(index_downloaded-1).getName()+" downloaded",Toast.LENGTH_SHORT).show();
                 pb_download.setVisibility(View.GONE);
             }
         });
@@ -896,6 +1009,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (manager!=null){
             manager.cancel(1);
         }
+        stopService(new Intent(MainActivity.this,EarAndNewSongListeningService.class));
+        unbindService(conn_en);
         unregisterReceiver(receiver);
         audioManager.abandonAudioFocus(onAudioFocusChangeListener);
         super.onDestroy();

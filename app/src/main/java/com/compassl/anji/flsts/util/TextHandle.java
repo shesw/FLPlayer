@@ -1,36 +1,12 @@
-package com.compassl.anji.songs_ssw.util;
+package com.compassl.anji.flsts.util;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.Messenger;
-import android.util.Log;
-import android.util.Size;
-
-import com.compassl.anji.songs_ssw.R;
-import com.compassl.anji.songs_ssw.db.SongInfo;
+import com.compassl.anji.flsts.db.SongInfo;
 
 import org.litepal.crud.DataSupport;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 /**
  * Created by Administrator on 2017/11/2.
