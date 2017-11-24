@@ -41,7 +41,6 @@ public class UpdateBackgroundPic extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {

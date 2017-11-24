@@ -16,14 +16,19 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name="com.compassl.anji.flsts.MainActivity"
-            android:launchMode="singleTask">
+            android:name="com.compassl.anji.flsts.FirstActivity"
+            android:launchMode="standard"
+            android:theme="@style/Transparent">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.compassl.anji.flsts.MusicActivity"
+            android:launchMode="singleTask"
+            android:theme="@style/Transparent"></activity>
 
         <service
             android:name="com.compassl.anji.flsts.service.UpdateBackgroundPic"
@@ -47,6 +52,14 @@
             android:name="com.compassl.anji.flsts.service.EarAndNewSongListeningService"
             android:enabled="true"
             android:exported="true" />
+        <service
+            android:name="com.compassl.anji.flsts.service.MusicPlayService"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="MUSIC_PLAYING_SERVICE"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

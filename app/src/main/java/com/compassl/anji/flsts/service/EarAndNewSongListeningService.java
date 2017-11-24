@@ -29,9 +29,9 @@ import okhttp3.Response;
 public class EarAndNewSongListeningService extends Service {
 
     private static final String url_song_info
-            ="http://sinacloud.net/music-store/song_info.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1543597193&ssig=XTUNLGUxmA";
+            ="http://sinacloud.net/music-store/song_info.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1546275596&ssig=4zOsvELpoS";
     private static final String url_song_info_1
-            = "http://sinacloud.net/music-store/song_info_1.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1543597193&ssig=oLDCAlxrZ1";
+            = "http://sinacloud.net/music-store/song_info_1.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1546275596&ssig=0lIrmY9jrB";
 
     private AudioManager audioManager;
 
@@ -55,7 +55,6 @@ public class EarAndNewSongListeningService extends Service {
         }
     }
     private UBPBinder mBinder = new UBPBinder();
-
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -101,7 +100,7 @@ public class EarAndNewSongListeningService extends Service {
         });
     }
     private int count;
-    //private SharedPreferences prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+
     //更新歌曲列表
     private void loadNewSong() {
         final String downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
@@ -124,7 +123,6 @@ public class EarAndNewSongListeningService extends Service {
                 for (int i = 1;i<=SONG_ACCOUNT;i++){
                     final String i_str = i>9?""+i:"0"+i;
                     final String imgPath = downloadPath+"img/s"+i_str+".jpg";
-                    Log.d("imgPath", "dp: "+imgPath);
                     File file = new File(imgPath);
                     if (file.exists()){
                         continue;
@@ -145,9 +143,9 @@ public class EarAndNewSongListeningService extends Service {
                             os1.write(buf1);
                             os1.flush();
                             os1.close();
-                            if (ii == SONG_ACCOUNT){
-                                EarAndNewSongListeningService.UBPBinder.listener.updateUI();
+                            if(ii == SONG_ACCOUNT){
                                 prefs.edit().putInt("song_count",count).apply();
+                                UBPBinder.listener.updateUI();
                             }
                         }
                     });
@@ -155,8 +153,4 @@ public class EarAndNewSongListeningService extends Service {
             }
         });
     }
-
-
-
-
 }

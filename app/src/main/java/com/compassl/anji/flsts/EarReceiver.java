@@ -32,7 +32,7 @@ public class EarReceiver extends BroadcastReceiver {
                     if (event.getAction() == KeyEvent.ACTION_UP){
                         Intent intent1 = new Intent("notification_button");
                         intent1.putExtra("noti",9);
-                        context.sendBroadcast(intent1);
+                        context.sendOrderedBroadcast(intent1,null);
                     }
                     break;
                 default:
