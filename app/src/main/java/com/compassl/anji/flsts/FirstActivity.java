@@ -21,6 +21,7 @@ public class FirstActivity extends AppCompatActivity {
     private ProgressBar pb_wait;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d("changeactivity", "first onCreate: ");
         if (!isTaskRoot()){
             finish();
             return;
@@ -35,10 +36,6 @@ public class FirstActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    @Override
-    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-    }
 
     @Override
     public void onBackPressed() {
@@ -60,19 +57,22 @@ public class FirstActivity extends AppCompatActivity {
         alertDialog.show();
     }
 
+    @Override
+    protected void onStart() {
+        Log.d("changeactivity", "first onStart: ");
+        super.onStart();
+    }
+
+    @Override
+    protected void onPostResume() {
+        Log.d("changeactivity", " first onPostResume: ");
+        super.onPostResume();
+    }
 
     @Override
     protected void onRestart() {
-        List<Activity> list = ActivityCollector.getActivityList();
-        if (list.size()>0){
-            String name = list.get(list.size()-1).getClass().getSimpleName();
-            if (name.equals("MusicActivity")){
-                Intent intent = new Intent(FirstActivity.this,MusicActivity.class);
-                startActivity(intent);
-            }
-        }
         super.onRestart();
-        Log.d("changeactivity", " fist onRestart: ");
+        Log.d("changeactivity", " first onRestart: ");
     }
 
     @Override

@@ -107,10 +107,8 @@ public class DownloadMusic extends Service {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         DownloadBinder.listener.closeProgress(index);
         stopSelf();
-
     }
 
     public interface MyDownloadListener{

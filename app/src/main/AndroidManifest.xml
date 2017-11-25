@@ -49,7 +49,7 @@
             android:enabled="true"
             android:exported="true" />
         <service
-            android:name="com.compassl.anji.flsts.service.EarAndNewSongListeningService"
+            android:name="com.compassl.anji.flsts.service.NewSongListeningService"
             android:enabled="true"
             android:exported="true" />
         <service

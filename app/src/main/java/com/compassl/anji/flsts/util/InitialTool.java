@@ -28,10 +28,10 @@ public class InitialTool {
     public static List<Song> initSongChoose(Context context){
         SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
         List<Song> songList = new ArrayList<>();
-        int total = prefs.getInt("song_count_show",1);
+        int total = prefs.getInt("song_count_show",2);
         for (int i = 1;i<=total;i++){
             List<SongInfo> name1 = DataSupport.select("song_name").where("song_id = ?",i+"").find(SongInfo.class);
-            String name = name1.get(0).getSong_name();
+            String name = name1.get(name1.size()-1).getSong_name();
             String i_str = i>9?i+"":"0"+i;
             String imgRes = context.getFilesDir().getAbsolutePath()+"/FLMusic/img/s"+i_str+".jpg";
             Log.d("imgPath", "id: "+imgRes);

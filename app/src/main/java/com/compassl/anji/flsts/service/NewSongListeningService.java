@@ -1,13 +1,11 @@
 package com.compassl.anji.flsts.service;
 
 import android.app.Service;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Binder;
 import android.os.IBinder;
-import android.support.v4.media.session.MediaButtonReceiver;
 import android.util.Log;
 
 import com.compassl.anji.flsts.db.SongInfo;
@@ -26,38 +24,37 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class EarAndNewSongListeningService extends Service {
+public class NewSongListeningService extends Service {
 
     private static final String url_song_info
             ="http://sinacloud.net/music-store/song_info.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1546275596&ssig=4zOsvELpoS";
     private static final String url_song_info_1
             = "http://sinacloud.net/music-store/song_info_1.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1546275596&ssig=0lIrmY9jrB";
 
-    private AudioManager audioManager;
+    //private AudioManager audioManager;
 
-    @Override
-    public void onCreate() {
-        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+    private UBPBinder mBinder = new UBPBinder();
+    public NewSongListeningService() {
     }
-
-    public EarAndNewSongListeningService() {
-    }
-
-
     public interface OnUpdateFinishListener{
         void updateUI();
     }
-
-    public static class UBPBinder extends Binder {
-        private static OnUpdateFinishListener listener;
+    public class UBPBinder extends Binder {
+        private OnUpdateFinishListener listener;
         public void setOnUpdateFinishListener(OnUpdateFinishListener listener){
-            UBPBinder.listener = listener;
+            this.listener = listener;
         }
     }
-    private UBPBinder mBinder = new UBPBinder();
+    @Override
+    public IBinder onBind(Intent intent) {
+        return mBinder;
+    }
+    private SharedPreferences prefs;
+
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public void onCreate() {
+        prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
         Thread thread_new_song = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -70,15 +67,45 @@ public class EarAndNewSongListeningService extends Service {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        stopSelf();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                sendNewSongInfo();
+            }
+        }).start();
+    }
+
+    private void sendNewSongInfo(){
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (alreadyHandled == count){
+            int song_count = prefs.getInt("song_count",-1);
+            int song_count_show = prefs.getInt("song_count_show",-1);
+            if (song_count!=song_count_show && mBinder.listener!=null){
+                Log.d("bl", "listener is not null");
+                mBinder.listener.updateUI();
+                prefs.edit().putInt("song_count",count).apply();
+            }else {
+                Log.d("bl", "listener is null");
+            }
+        }else {
+            sendNewSongInfo();
+        }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
+    public void onDestroy() {
+        super.onDestroy();
     }
-    private SharedPreferences prefs;
 
     private void hasNewSong(){
         String url = url_song_info_1;
@@ -88,19 +115,18 @@ public class EarAndNewSongListeningService extends Service {
             }
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
                 String str = response.body().string();
                 String str_1 = str.substring(str.indexOf("[c!")+3,str.indexOf("]"));
                 count = Integer.parseInt(str_1);
-                int count_this = prefs.getInt("song_count_show",-1);
-                if (count != count_this){
+                int count_show = prefs.getInt("song_count_show",-1);
+                if (count != count_show){
                     loadNewSong();
                 }
             }
         });
     }
     private int count;
-
+    private int alreadyHandled = 0;
     //更新歌曲列表
     private void loadNewSong() {
         final String downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
@@ -118,13 +144,14 @@ public class EarAndNewSongListeningService extends Service {
             public void onResponse(Call call, Response response) throws IOException {
                 //完成配置文件的下载
                 String str = response.body().string();
-                InitialTool.loadInfo(EarAndNewSongListeningService.this,downloadPath,str,count);
+                InitialTool.loadInfo(NewSongListeningService.this,downloadPath,str,count);
                 //完成图片文件下载
                 for (int i = 1;i<=SONG_ACCOUNT;i++){
                     final String i_str = i>9?""+i:"0"+i;
                     final String imgPath = downloadPath+"img/s"+i_str+".jpg";
                     File file = new File(imgPath);
                     if (file.exists()){
+                        alreadyHandled++;
                         continue;
                     }
                     final int ii = i;
@@ -143,10 +170,7 @@ public class EarAndNewSongListeningService extends Service {
                             os1.write(buf1);
                             os1.flush();
                             os1.close();
-                            if(ii == SONG_ACCOUNT){
-                                prefs.edit().putInt("song_count",count).apply();
-                                UBPBinder.listener.updateUI();
-                            }
+                            alreadyHandled++;
                         }
                     });
                 }
