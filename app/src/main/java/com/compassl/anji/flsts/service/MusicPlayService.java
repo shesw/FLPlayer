@@ -49,7 +49,10 @@ import static com.compassl.anji.songs_ssw.R.id.tv_display_time_current;
 public class MusicPlayService extends Service {
     public MusicPlayService() {
     }
-    private int index=1;
+    private int index=0;
+    private int FROM_WHERE = 1;
+    private static final int FROM_NET = 0;
+    private static final int FROM_FILE = 1;
 
     private int SONG_ACCOUNT=0;
     private static final int MODE_LIST_LOOP = 1;
@@ -67,7 +70,7 @@ public class MusicPlayService extends Service {
     private IntentFilter filter;
 
     private List<Song> songList = new ArrayList<>();
-    private static MediaPlayer mediaPlayer = new MediaPlayer();
+    private static MediaPlayer mediaPlayer;
 
 
     //监听通知栏发出的广播
@@ -75,18 +78,24 @@ public class MusicPlayService extends Service {
         @Override
         public void onReceive(Context context, Intent intent) {
             switch (intent.getIntExtra("noti",-1)){
+                case -1:
+                    startActivity(new Intent(context,MusicActivity.class));
+                    break;
                 //通知栏广播
                 case 0: //播放上一首
                     changePre();
+                    mediaPlayer.start();
                     break;
                 case 1: //播放——暂停
                     changPP();
                     break;
                 case 2: //播放下一首
                     changNext();
+                    mediaPlayer.start();
                     break;
-                case 3:
-                    onDestroy();
+                case 3: //销毁
+                    myBinder.listener.closeMusicActivity();
+                    stopSelf();
                     break;
                 //耳机监听广播
                 case 9:
@@ -99,26 +108,36 @@ public class MusicPlayService extends Service {
         }
     }
     private void changNext() {
-        changeSong(++index);
+        if (index!=SONG_ACCOUNT){
+            changeSong(++index);
+        }else{
+            changeSong((index=1));
+        }
     }
     private void changPP() {
         if (mediaPlayer.isPlaying()){
             mediaPlayer.pause();
-            myBinder.listener.changePP("pause");
+            myBinder.listener.changePP("start");
         }else {
             mediaPlayer.start();
-            myBinder.listener.changePP("start");
+            myBinder.listener.changePP("pause");
         }
         createNotification();
     }
     private void changePre() {
-        changeSong(--index);
+        if (index!=1){
+            changeSong(--index);
+        }else {
+            changeSong((index = SONG_ACCOUNT));
+        }
     }
 
 
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d("mmediaplayer", "onCreate: ");
+        mediaPlayer = new MediaPlayer();
         downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
     }
     @Override
@@ -161,8 +180,10 @@ public class MusicPlayService extends Service {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            FROM_WHERE = FROM_FILE;
             myBinder.listener.changeInfo_Ly_Bs(index,"file");
         }else if (isNetWorkAvailable()){
+            FROM_WHERE = FROM_NET;
             try {
                 List<SongInfo> list = DataSupport.select("urlMp3").where("song_id=?",index+"").find(SongInfo.class);
                 String urlMp3 = list.get(list.size()-1).getUrlMp3();
@@ -185,6 +206,7 @@ public class MusicPlayService extends Service {
                 mediaPlayer.start();
             }
         });
+        mediaPlayer.start();
         createNotification();
     }
 
@@ -230,6 +252,7 @@ public class MusicPlayService extends Service {
     }
     private RemoteViews getRemoteView(){
         final RemoteViews view = new RemoteViews(getPackageName(),R.layout.foreground_layout);
+        view.setOnClickPendingIntent(R.layout.foreground_layout,getClickPendingIntent(-1));
         view.setOnClickPendingIntent(R.id.ib_fore_pre,getClickPendingIntent(0));
         view.setOnClickPendingIntent(R.id.ib_fore_p_p,getClickPendingIntent(1));
         view.setOnClickPendingIntent(R.id.ib_fore_next,getClickPendingIntent(2));
@@ -260,6 +283,8 @@ public class MusicPlayService extends Service {
         void changeInfo_Ly_Bs(int i,String fileOrNet);
         void changePP(String startOrPause);
         void noNetWork(int id);
+        void setL_B(int id, int FromWhere);
+        void closeMusicActivity();
     }
     public class MyBinder extends Binder{
         private OnRequestListener listener;
@@ -267,6 +292,11 @@ public class MusicPlayService extends Service {
             return mediaPlayer.isPlaying();
         }
         public void start(){mediaPlayer.start();}
+        public void ACreate(){
+            if (index!=0){
+                listener.setL_B(index,FROM_WHERE);
+            }
+        }
         public void setOnRequestListener(OnRequestListener listener){
             this.listener = listener;
         }
@@ -282,13 +312,19 @@ public class MusicPlayService extends Service {
         public void setLooping(boolean b){
             mediaPlayer.setLooping(b);
         }
+        public void setMode(int mode){
+            MODE = mode;
+        }
+        public int getIndex(){
+            return index;
+        };
         public void playPre(){
             if (index == 1){
                 changSong((index = SONG_ACCOUNT));
             }else {
                 changeSong(--index);
             }
-            mediaPlayer.start();
+            //mediaPlayer.start();
         }
         public void playNext(){
             if (index == SONG_ACCOUNT){
@@ -296,7 +332,7 @@ public class MusicPlayService extends Service {
             }else {
                 changeSong(++index);
             }
-            mediaPlayer.start();
+            //mediaPlayer.start();
         }
         public void changP_P(){
             if (mediaPlayer.isPlaying()){
@@ -307,7 +343,7 @@ public class MusicPlayService extends Service {
         }
         public void changSong(int id){
             changeSong(id);
-            mediaPlayer.start();
+            //mediaPlayer.start();
         }
     }
 
@@ -318,6 +354,10 @@ public class MusicPlayService extends Service {
             mediaPlayer.reset();
             mediaPlayer.release();
         }
+   //     android.os.Debug.waitForDebugger();
+        unregisterReceiver(receiver);
+        manager.cancel(1);
+        Log.d("mmediaplayer", "onDestroy: ");
         super.onDestroy();
     }
 }

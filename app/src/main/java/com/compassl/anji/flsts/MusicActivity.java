@@ -1,5 +1,6 @@
 package com.compassl.anji.flsts;
 
+import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -115,8 +116,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 case SEEK_BAR_UPDATE:
                     if (update && mediaPlayer!=null && !isOnPause){
                         try {
-                            sb_song_play_progress.setMax(mediaPlayer.getDuration());
                             sb_song_play_progress.setProgress(mediaPlayer.getCurrentPosition());
+                            tv_display_time_current.setText(MathUtil.getDisplayTime(mediaPlayer.getCurrentPosition()));
                         }catch (Exception e ){e.printStackTrace();}
                         lv_ly.updateTime(mediaPlayer.getCurrentPosition());
                     }
@@ -136,9 +137,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                     break;
                 default:
                     break;
-            }
-            if (update && mediaPlayer!=null && !isOnPause){
-                tv_display_time_current.setText(MathUtil.getDisplayTime(mediaPlayer.getCurrentPosition()));
             }
         }
     };
@@ -190,6 +188,16 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 public void noNetWork(int id) {
                     index = id;
                     Toast.makeText(MusicActivity.this,"not internet",Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void setL_B(int id, int FromWhere) {
+                    setLB(id, FromWhere==0?"net":"file");
+                }
+
+                @Override
+                public void closeMusicActivity() {
+                    finish();
                 }
             });
         }
@@ -298,23 +306,106 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         });
         //音乐下载地址
         downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
-        //启动更新背景图片服务
-        Intent intent_ubp = new Intent(MusicActivity.this, UpdateBackgroundPic.class);
-        startService(intent_ubp);
-        //启动歌曲播放服务
-        Intent intent_mp = new Intent(MusicActivity.this,MusicPlayService.class);
-        startService(intent_mp);
-        bindService(intent_mp,conn_mp,BIND_AUTO_CREATE);
-        //启动新歌更新服务
-        Intent intent_en = new Intent(MusicActivity.this,NewSongListeningService.class);
-        startService(intent_en);
-        bindService(intent_en,conn_en,BIND_AUTO_CREATE);
-        //初始化界面
-        initChangSong();
+        if (isNetWorkAvailable()){
+           startSPService();
+        }else {
+            listenNewsongAccordingToNet();
+        }
+
+
+        if (isServiceRunning(this,"com.compassl.anji.flsts.service.MusicPlayService")){
+            //启动歌曲播放服务，如果服务已经启动，则直接bind
+            Intent intent_mp = new Intent(MusicActivity.this,MusicPlayService.class);
+            bindService(intent_mp,conn_mp,BIND_AUTO_CREATE);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            initOther();
+                            mediaPlayer.ACreate();
+                        }
+                    });
+                }
+            }).start();
+        }else {
+            //启动歌曲播放服务，如果服务未启动，则先start
+            Intent intent_mp = new Intent(MusicActivity.this,MusicPlayService.class);
+            startService(intent_mp);
+            bindService(intent_mp,conn_mp,BIND_AUTO_CREATE);
+            //初始化界面
+            initChangSong();
+        }
+
         Log.d("changeactivity", "music onCreate: ");
+
     }
+
     ////////////////////////////////////////////////////
     //OnCreate结束
+
+    //监听网络状态更新音乐和背景图片
+    private void listenNewsongAccordingToNet() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000*60*10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        if (isNetWorkAvailable()){
+            startSPService();
+        }else {
+            listenNewsongAccordingToNet();
+        }
+    }
+
+    private void startSPService() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //启动更新背景图片服务
+                Intent intent_ubp = new Intent(MusicActivity.this, UpdateBackgroundPic.class);
+                startService(intent_ubp);
+                //启动新歌更新服务
+                Intent intent_en = new Intent(MusicActivity.this,NewSongListeningService.class);
+                startService(intent_en);
+                bindService(intent_en,conn_en,BIND_AUTO_CREATE);
+            }
+        }).start();
+    }
+
+
+    /*
+     * 判断服务是否启动,context上下文对象 ，className服务的name
+     */
+    public static boolean isServiceRunning(Context mContext, String className) {
+        boolean isRunning = false;
+        ActivityManager activityManager = (ActivityManager) mContext
+                .getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningServiceInfo> serviceList = activityManager
+                .getRunningServices(30);
+        if (!(serviceList.size() > 0)) {
+            return false;
+        }
+        for (int i = 0; i < serviceList.size(); i++) {
+            String get = serviceList.get(i).service.getClassName();
+            if (get.equals(className)) {
+                isRunning = true;
+                break;
+            }
+        }
+        return isRunning;
+    }
 
 
     //方法：初始化界面
@@ -322,8 +413,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         lv_ly.loadLrc("[00:05.000]choose one song please");
         tv_bs.setText("请选择歌曲");
         tv_song_info.setText("请选择歌曲");
-        tv_display_time_total.setText("00.00.000");
-        tv_display_time_current.setText("00.00.000");
+        tv_display_time_total.setText("00.00");
+        tv_display_time_current.setText("00.00");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -422,39 +513,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         //为显示歌曲总时间和当前进度的TextView设置属性，使文字加粗
         tv_display_time_current.getPaint().setFakeBoldText(true);
         tv_display_time_total.getPaint().setFakeBoldText(true);
-        //歌曲进度显示条设置拖动监听器和子线程操作
-        sb_song_play_progress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser){
-                    mediaPlayer.seekTo(progress);
-                }
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true){
-                    try {
-                        Thread.sleep(100);
-                    }catch (Exception e){e.printStackTrace();}
-                    Message message = new Message();
-                    message.what = SEEK_BAR_UPDATE;
-                    handler.sendMessage(message);
-                }
-            }
-        }).start();
-
 
         //判断有无配置文件，若没有，则创建
+        prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
         int count = prefs.getInt("song_count_show",9);
         if (!hasSongInfoText()) {
             InitialTool.loadInfo(MusicActivity.this, downloadPath, null,count);
         }
+        vf_ly_bs.setDisplayedChild(1);
     }
 
 
@@ -544,7 +610,36 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         }else {
             lv_ly.loadLrc("无网络连接，暂无歌词");
             tv_song_info.setText("无网络连接，暂无信息");
+            return false;
         }
+        //歌曲进度显示条设置拖动监听器和子线程操作
+        sb_song_play_progress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser){
+                    mediaPlayer.seekTo(progress);
+                }
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true){
+                    try {
+                        Thread.sleep(100);
+                    }catch (Exception e){e.printStackTrace();}
+                    Message message = new Message();
+                    message.what = SEEK_BAR_UPDATE;
+                    handler.sendMessage(message);
+                }
+            }
+        }).start();
+        sb_song_play_progress.setMax(mediaPlayer.getDuration());
+        tv_display_time_total.setText(MathUtil.getDisplayTime(mediaPlayer.getDuration()));
         return true;
     }
 
@@ -676,7 +771,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         Log.d("changeactivity", "music onDestroy: ");
         unbindService(conn_mp);
         unbindService(conn_en);
-        unbindService(conn);
         Intent intent_en = new Intent(MusicActivity.this,NewSongListeningService.class);
         stopService(intent_en);
         if (isTaskRoot()){
@@ -688,6 +782,12 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         super.onDestroy();
     }
 
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        //startActivity(new Intent(MusicActivity.this,FirstActivity.class));
+    }
 
     @Override
     protected void onStart() {
@@ -737,7 +837,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 break;
             case R.id.bt_play_and_pause:
                 mediaPlayer.changP_P();
-                if (mediaPlayer.isPlaying()){
+                if (!mediaPlayer.isPlaying()){
                     bt_play_pause.setImageResource(R.drawable.play);
                 }else {
                     bt_play_pause.setImageResource(R.drawable.pause);
@@ -750,20 +850,24 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 if (MODE==MODE_LIST_LOOP){
                     MODE = MODE_SINGLE_LOOP;
                     mediaPlayer.setLooping(true);
+                    mediaPlayer.setMode(MODE);
                     bt_mode.setImageResource(R.drawable.single);
                     Toast.makeText(MusicActivity.this,"单曲循环",Toast.LENGTH_SHORT).show();
                 }else if (MODE == MODE_SINGLE_LOOP){
                     MODE = MODE_RANDOM;
                     mediaPlayer.setLooping(false);
+                    mediaPlayer.setMode(MODE);
                     bt_mode.setImageResource(R.drawable.random_play);
                     Toast.makeText(MusicActivity.this,"随机播放",Toast.LENGTH_SHORT).show();
                 }else if (MODE == MODE_RANDOM){
                     MODE = MODE_PLAY_BY_ORDER;
                     mediaPlayer.setLooping(false);
+                    mediaPlayer.setMode(MODE);
                     bt_mode.setImageResource(R.drawable.play_by_order);
                     Toast.makeText(MusicActivity.this,"顺序播放",Toast.LENGTH_SHORT).show();
                 }else if(MODE == MODE_PLAY_BY_ORDER){
                     MODE = MODE_LIST_LOOP;
+                    mediaPlayer.setMode(MODE);
                     mediaPlayer.setLooping(false);
                     bt_mode.setImageResource(R.drawable.allplay);
                     Toast.makeText(MusicActivity.this,"列表循环",Toast.LENGTH_SHORT).show();
