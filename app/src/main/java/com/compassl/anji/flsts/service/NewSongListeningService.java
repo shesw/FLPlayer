@@ -31,7 +31,6 @@ public class NewSongListeningService extends Service {
     private static final String url_song_info_1
             = "http://sinacloud.net/music-store/song_info_1.txt?KID=sina,2o3w9tlWumQRMwg2TQqi&Expires=1546275596&ssig=0lIrmY9jrB";
 
-    //private AudioManager audioManager;
 
     private UBPBinder mBinder = new UBPBinder();
     public NewSongListeningService() {
@@ -77,25 +76,53 @@ public class NewSongListeningService extends Service {
     }
 
     private void sendNewSongInfo(){
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        if (alreadyHandled == count){
-            int song_count = prefs.getInt("song_count",-1);
-            int song_count_show = prefs.getInt("song_count_show",-1);
-            if (song_count!=song_count_show && mBinder.listener!=null){
-                Log.d("bl", "listener is not null");
-                mBinder.listener.updateUI();
-                prefs.edit().putInt("song_count",count).apply();
-            }else {
-                Log.d("bl", "listener is null");
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (hasAllSongDownloaded()){
+                    int song_count = prefs.getInt("song_count",-1);
+                    int song_count_show = prefs.getInt("song_count_show",-1);
+                    if (song_count!=song_count_show && mBinder.listener!=null){
+                        try {
+                            Thread.sleep(3000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        mBinder.listener.updateUI();
+                        prefs.edit().putInt("song_count",count).apply();
+                    }else {
+                        Log.d("bl", "listener is null");
+                    }
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }else {
+                    sendNewSongInfo();
+                }
             }
-        }else {
-            sendNewSongInfo();
-        }
+        }).start();
     }
+
+    private boolean hasAllSongDownloaded(){
+        String downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
+        for (int i = 1;i <=count;i++){
+            String str = downloadPath+"img/s"+(i>9?i+"":"0"+i)+".jpg";
+            File file = new File(str);
+            if (!file.exists()){
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -126,7 +153,6 @@ public class NewSongListeningService extends Service {
         });
     }
     private int count;
-    private int alreadyHandled = 0;
     //更新歌曲列表
     private void loadNewSong() {
         final String downloadPath = getFilesDir().getAbsolutePath()+"/FLMusic/";
@@ -151,7 +177,6 @@ public class NewSongListeningService extends Service {
                     final String imgPath = downloadPath+"img/s"+i_str+".jpg";
                     File file = new File(imgPath);
                     if (file.exists()){
-                        alreadyHandled++;
                         continue;
                     }
                     final int ii = i;
@@ -170,7 +195,6 @@ public class NewSongListeningService extends Service {
                             os1.write(buf1);
                             os1.flush();
                             os1.close();
-                            alreadyHandled++;
                         }
                     });
                 }

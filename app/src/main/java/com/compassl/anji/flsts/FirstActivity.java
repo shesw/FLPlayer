@@ -1,20 +1,13 @@
 package com.compassl.anji.flsts;
 
-import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
-
-import com.compassl.anji.flsts.service.UpdateBackgroundPic;
-import com.compassl.anji.songs_ssw.R;
-
-import java.util.List;
 
 public class FirstActivity extends AppCompatActivity {
 

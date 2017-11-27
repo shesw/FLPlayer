@@ -6,7 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.Image;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
@@ -36,16 +39,23 @@ import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import com.bumptech.glide.Glide;
+import com.compassl.anji.flsts.db.SongInfo;
 import com.compassl.anji.flsts.service.DownloadMusic;
 import com.compassl.anji.flsts.service.NewSongListeningService;
 import com.compassl.anji.flsts.service.MusicPlayService;
 import com.compassl.anji.flsts.service.UpdateBackgroundPic;
 import com.compassl.anji.flsts.util.HttpUtil;
-import com.compassl.anji.songs_ssw.R;
+import com.compassl.anji.flsts.util.ImageUtil;
 import com.compassl.anji.flsts.util.InitialTool;
 import com.compassl.anji.flsts.util.TextHandle;
 import com.compassl.anji.flsts.util.MathUtil;
 import com.tencent.mm.sdk.openapi.IWXAPI;
+import com.tencent.mm.sdk.openapi.SendMessageToWX;
+import com.tencent.mm.sdk.openapi.WXAPIFactory;
+import com.tencent.mm.sdk.openapi.WXMediaMessage;
+import com.tencent.mm.sdk.openapi.WXMusicObject;
+
+import org.litepal.crud.DataSupport;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -56,16 +66,17 @@ import java.util.List;
 import java.util.Random;
 
 
+
 import me.wcy.lrcview.LrcView;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
 public class MusicActivity extends AppCompatActivity implements View.OnClickListener,RvAdapter.OnItemClickListenerRV{
-    private static final String APP_ID = "";
+    private static final String APP_ID = "wx7f588bbedade918d";
     private IWXAPI wxapi;
 
-    private int index= 1;
+    private int index= 0;
     private static final int CURRENT_INFO = 0;
     private static final int CURRENT_LY = 1;
     private static final int CURRENT_BS = 2;
@@ -342,7 +353,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             //初始化界面
             initChangSong();
         }
-
         Log.d("changeactivity", "music onCreate: ");
 
     }
@@ -393,7 +403,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         ActivityManager activityManager = (ActivityManager) mContext
                 .getSystemService(Context.ACTIVITY_SERVICE);
         List<ActivityManager.RunningServiceInfo> serviceList = activityManager
-                .getRunningServices(30);
+                .getRunningServices(200);
         if (!(serviceList.size() > 0)) {
             return false;
         }
@@ -415,32 +425,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         tv_song_info.setText("请选择歌曲");
         tv_display_time_total.setText("00.00");
         tv_display_time_current.setText("00.00");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //设置背景图案
-                prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
-                final int pic_id = prefs.getInt("id",-1);
-                if (pic_id!=-1){
-                    String savePath = downloadPath+"backgroundPic/B"+pic_id+".txt";
-                    try {
-                        InputStream is = new FileInputStream(savePath);
-                        byte[] buf = new byte[is.available()];
-                        is.read(buf);
-                        is.close();
-                        final String url = new String(buf);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Glide.with(MusicActivity.this).load(url).into(iv_background);
-                            }
-                        });
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
+        setBackgroundPicture();
     }
 
     //初始化其它
@@ -521,9 +506,37 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             InitialTool.loadInfo(MusicActivity.this, downloadPath, null,count);
         }
         vf_ly_bs.setDisplayedChild(1);
+        setBackgroundPicture();
     }
 
-
+    private void setBackgroundPicture() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //设置背景图案
+                prefs = getSharedPreferences("bingPic",MODE_PRIVATE);
+                final int pic_id = prefs.getInt("id",-1);
+                if (pic_id!=-1){
+                    String savePath = downloadPath+"backgroundPic/B"+pic_id+".txt";
+                    try {
+                        InputStream is = new FileInputStream(savePath);
+                        byte[] buf = new byte[is.available()];
+                        is.read(buf);
+                        is.close();
+                        final String url = new String(buf);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Glide.with(MusicActivity.this).load(url).into(iv_background);
+                            }
+                        });
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+    }
 
 
     private boolean hasSongInfoText() {
@@ -684,9 +697,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
 
     //private AlertDialog dialog;
     private void share_to_wx() {
-        //wxapi = WXAPIFactory.createWXAPI(MusicActivity.this,APP_ID);
-        //启动微信
-        //wxapi.openWXApp();
         AlertDialog.Builder builder = new AlertDialog.Builder(MusicActivity.this,R.style.AlertDialog);
         LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
         //
@@ -706,24 +716,66 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         ib_hy.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Toast.makeText(MusicActivity.this,"hy",Toast.LENGTH_SHORT).show();
+                shareToWX(0);
                 dialog.dismiss();
-                Toast.makeText(MusicActivity.this,"hy",Toast.LENGTH_SHORT).show();
             }
         });
         ImageButton ib_pyq = (ImageButton) view.findViewById(R.id.ib_pyq);
         ib_pyq.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Toast.makeText(MusicActivity.this,"pyq",Toast.LENGTH_SHORT).show();
+                shareToWX(1);
                 dialog.dismiss();
-                Toast.makeText(MusicActivity.this,"pyq",Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-//    //为请求生成一个唯一的标识
-//    private String buildTransaction(final String type){
-//        return (type == null)?String.valueOf(System.currentTimeMillis()):type+ System.currentTimeMillis();
-//    }
+    private void shareToWX(int where) {
+        //where=0代表分享给好友，1代表分享到朋友圈
+        wxapi = WXAPIFactory.createWXAPI(MusicActivity.this,APP_ID,true);
+        wxapi.registerApp(APP_ID);
+       // wxapi.openWXApp();
+        //新建对象
+        WXMusicObject object = new WXMusicObject();
+        List<SongInfo> list = DataSupport.select("urlMp3").where("song_id=?",index+"").find(SongInfo.class);
+        object.musicUrl = list.get(list.size()-1).getUrlMp3();
+        //新建信息
+        WXMediaMessage message = new WXMediaMessage();
+        message.mediaObject = object;
+        message.title = songList.get(index-1).getName();
+        message.description = "呵呵";
+        //缩略图
+        String str = downloadPath+"img/s"+(index>9?index+"":"0"+index)+".jpg";
+        Bitmap bitmap = BitmapFactory.decodeFile(str);
+ //       Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.single);
+        message.thumbData = ImageUtil.bmpToByteArray(bitmap,true);
+        //新建请求
+        SendMessageToWX.Req req = new SendMessageToWX.Req();
+        req.transaction = buildTransaction("music");
+        req.message = message;
+        switch (where){
+            case 0:
+                req.scene = SendMessageToWX.Req.WXSceneSession;
+                break;
+            case 1:
+                req.scene = SendMessageToWX.Req.WXSceneTimeline;
+                break;
+            default:
+                break;
+        }
+        //发送
+        boolean suc = wxapi.sendReq(req);
+        Log.d("wx", suc+"");
+
+    }
+
+
+    //为请求生成一个唯一的标识
+    private String buildTransaction(final String type){
+        return (type == null)?String.valueOf(System.currentTimeMillis()):type+ System.currentTimeMillis();
+    }
 
     private boolean isDownloadFinish = true;
     private void showDownloadProgress(){
@@ -786,7 +838,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        //startActivity(new Intent(MusicActivity.this,FirstActivity.class));
     }
 
     @Override
@@ -830,6 +881,10 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         if (firstIn){
             initOther();
             firstIn = false;
+        }
+        if (v.getId() != R.id.fbt_menu && v.getId() != R.id.ib_refresh_songList && ( index<1 || index>songList.size() )){
+            Toast.makeText(MusicActivity.this,"请先选择歌曲",Toast.LENGTH_SHORT).show();
+            return;
         }
         switch (v.getId()){
             case R.id.bt_previous:

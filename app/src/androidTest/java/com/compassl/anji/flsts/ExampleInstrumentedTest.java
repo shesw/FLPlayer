@@ -1,4 +1,4 @@
-package com.compassl.anji.songs_ssw;
+package com.compassl.anji.flsts;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

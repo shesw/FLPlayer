@@ -1,5 +1,6 @@
 package com.compassl.anji.flsts.util;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
@@ -28,9 +29,12 @@ public class InitialTool {
     public static List<Song> initSongChoose(Context context){
         SharedPreferences prefs = context.getSharedPreferences("bingPic",Context.MODE_PRIVATE);
         List<Song> songList = new ArrayList<>();
-        int total = prefs.getInt("song_count_show",2);
+        int total = prefs.getInt("song_count_show",1);
         for (int i = 1;i<=total;i++){
             List<SongInfo> name1 = DataSupport.select("song_name").where("song_id = ?",i+"").find(SongInfo.class);
+            if (name1.size()==0){
+                continue;
+            }
             String name = name1.get(name1.size()-1).getSong_name();
             String i_str = i>9?i+"":"0"+i;
             String imgRes = context.getFilesDir().getAbsolutePath()+"/FLMusic/img/s"+i_str+".jpg";
@@ -76,14 +80,15 @@ public class InitialTool {
             }
 
             for (int i = 1;i<=song_count;i++){
+                List<SongInfo> list = DataSupport.select("song_id").where("song_id=?",i+"").find(SongInfo.class);
                 String str = bufferedReader.readLine();
                 String[] str5 = TextHandle.handleInfo(str);
-                SongInfo songInfo = new SongInfo(i,i,str5[0],str5[1],str5[2],str5[3],str5[4]);
-                List<SongInfo> list = DataSupport.select("song_id").where("song_id=?",i+"").find(SongInfo.class);
-                if (list.size()!=0){
-                    songInfo.updateAll();
-                }else {
+                if (list.size()==0){
+                    SongInfo songInfo = new SongInfo(i,str5[0],str5[1],str5[2],str5[3],str5[4]);
                     songInfo.save();
+                }else {
+                    SongInfo songInfo = new SongInfo(str5[0],str5[1],str5[2],str5[3],str5[4]);
+                    songInfo.updateAll("song_id=?",i+"");
                 }
             }
             bufferedReader.close();

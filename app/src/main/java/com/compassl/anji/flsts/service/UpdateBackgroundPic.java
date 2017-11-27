@@ -3,27 +3,17 @@ package com.compassl.anji.flsts.service;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.BitmapFactory;
-import android.os.Binder;
 import android.os.IBinder;
 import android.os.SystemClock;
-import android.util.Log;
 
-import com.compassl.anji.songs_ssw.R;
-import com.compassl.anji.flsts.db.SongInfo;
 import com.compassl.anji.flsts.util.HttpUtil;
-import com.compassl.anji.flsts.util.InitialTool;
-
-import org.litepal.crud.DataSupport;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;

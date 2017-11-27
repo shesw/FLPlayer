@@ -10,7 +10,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
-import com.compassl.anji.songs_ssw.R;
 
 import java.util.ArrayList;
 import java.util.List;

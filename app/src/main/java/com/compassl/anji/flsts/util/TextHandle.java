@@ -1,9 +1,12 @@
 package com.compassl.anji.flsts.util;
 
+import android.graphics.Bitmap;
+
 import com.compassl.anji.flsts.db.SongInfo;
 
 import org.litepal.crud.DataSupport;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,29 +50,6 @@ public class TextHandle {
         return new String[]{urlMp3,urlLyc,urlBgs};
     }
 
-//    //在新建文件夹内，根据id内容获得具体文件的下载地址
-//    public static String[] getWholeFilePath(Context context,int id){
-//        String line = "";
-//        try {
-//            InputStream is = new FileInputStream(context.getFilesDir().getAbsolutePath()+"/FLMusic/song_info.txt");
-//            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-//            while (id-- >0){
-//                reader.readLine();
-//            }
-//            line = reader.readLine();
-//            is.close();
-//            reader.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        int m_index = line.indexOf("[m!")+3;
-//        int l_index = line.indexOf("[l!")+3;
-//        int b_index = line.indexOf("[b!")+3;
-//        String urlMp3 = line.substring(m_index,line.indexOf("]",m_index));
-//        String urlLyc = line.substring(l_index,line.indexOf("]",l_index));
-//        String urlBgs = line.substring(b_index,line.indexOf("]",b_index));
-//        return new String[]{urlMp3,urlLyc,urlBgs};
-//    }
 
     public static String getLrcInfo(String allLrc){
         //Matcher m = Pattern.compile("\\[(\\d{1,2}):(\\d{1,2}).(\\d{1,2})\\]").matcher(allLrc);
@@ -85,5 +65,6 @@ public class TextHandle {
         return "\r\n\r\n\r\n"+str.replace("[ti:","歌曲：").replace("[ar:","作曲：").replace("[al:","专辑：").replace("[by:","作词：")
                 .replaceAll("]","");
     }
+
 
 }

@@ -14,22 +14,16 @@ import android.media.MediaPlayer;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Binder;
-import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
-import android.widget.Toast;
 
 import com.compassl.anji.flsts.MusicActivity;
 import com.compassl.anji.flsts.Song;
 import com.compassl.anji.flsts.db.SongInfo;
 import com.compassl.anji.flsts.util.InitialTool;
-import com.compassl.anji.flsts.util.MathUtil;
-import com.compassl.anji.flsts.util.TextHandle;
-import com.compassl.anji.songs_ssw.R;
+import com.compassl.anji.flsts.R;
 
 import org.litepal.crud.DataSupport;
 
@@ -38,13 +32,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-
-import static com.compassl.anji.songs_ssw.R.id.bt_play_and_pause;
-import static com.compassl.anji.songs_ssw.R.id.tv_display_time_current;
 
 public class MusicPlayService extends Service {
     public MusicPlayService() {
