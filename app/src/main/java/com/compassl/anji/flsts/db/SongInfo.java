@@ -14,6 +14,7 @@ public class SongInfo extends DataSupport{
     private String urlLyc;
     private String urlBgs;
     private String urlImg;
+    private String urlWeb;
 
     public String getUrlImg() {
         return urlImg;
@@ -35,12 +36,31 @@ public class SongInfo extends DataSupport{
         this.urlImg = urlImg;
     }
 
-    public SongInfo(String song_name, String urlMp3, String urlLyc, String urlBgs, String urlImg) {
+    public SongInfo(int song_id,String song_name, String urlMp3, String urlLyc, String urlBgs, String urlImg,String urlWeb) {
+        this.song_id = song_id;
         this.song_name = song_name;
         this.urlMp3 = urlMp3;
         this.urlLyc = urlLyc;
         this.urlBgs = urlBgs;
         this.urlImg = urlImg;
+        this.urlWeb = urlWeb;
+    }
+
+    public SongInfo(String song_name, String urlMp3, String urlLyc, String urlBgs, String urlImg, String urlWeb) {
+        this.song_name = song_name;
+        this.urlMp3 = urlMp3;
+        this.urlLyc = urlLyc;
+        this.urlBgs = urlBgs;
+        this.urlImg = urlImg;
+        this.urlWeb = urlWeb;
+    }
+
+    public String getUrlWeb() {
+        return urlWeb;
+    }
+
+    public void setUrlWeb(String urlWeb) {
+        this.urlWeb = urlWeb;
     }
 
     public int getSong_id() {

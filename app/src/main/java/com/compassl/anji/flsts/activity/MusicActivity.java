@@ -1,4 +1,4 @@
-package com.compassl.anji.flsts;
+package com.compassl.anji.flsts.activity;
 
 import android.app.ActivityManager;
 import android.content.ComponentName;
@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.media.Image;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
@@ -39,6 +38,12 @@ import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import com.bumptech.glide.Glide;
+import com.compassl.anji.flsts.ui.MyConcert;
+import com.compassl.anji.flsts.ui.MyLrcView;
+import com.compassl.anji.flsts.ui.MyTextView;
+import com.compassl.anji.flsts.R;
+import com.compassl.anji.flsts.adapter.RvAdapter;
+import com.compassl.anji.flsts.bean.Song;
 import com.compassl.anji.flsts.db.SongInfo;
 import com.compassl.anji.flsts.service.DownloadMusic;
 import com.compassl.anji.flsts.service.NewSongListeningService;
@@ -72,7 +77,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class MusicActivity extends AppCompatActivity implements View.OnClickListener,RvAdapter.OnItemClickListenerRV{
+public class MusicActivity extends AppCompatActivity implements View.OnClickListener,RvAdapter.OnItemClickListenerRV {
     private static final String APP_ID = "wx7f588bbedade918d";
     private IWXAPI wxapi;
 
@@ -108,6 +113,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
     private MyLrcView lv_ly;
     private String downloadPath;
     private SwipeRefreshLayout layout_fresh;
+    private MyConcert concert;
 
     private static final int MODE_LIST_LOOP = 1;
     private static final int MODE_SINGLE_LOOP = 2;
@@ -191,8 +197,10 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 public void changePP(String startOrPause) {
                     if ("pause".equals(startOrPause)){
                         bt_play_pause.setImageResource(R.drawable.pause);
+                        concert.setPlaying(false);
                     }else if ("start".equals(startOrPause)){
                         bt_play_pause.setImageResource(R.drawable.play);
+                        concert.setPlaying(true);
                     }
                 }
                 @Override
@@ -255,6 +263,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         ib_refresh_list = (ImageButton) findViewById(R.id.ib_refresh_songList);
         pb_download = (ProgressBar) findViewById(R.id.pb_download);
         layout_fresh = (SwipeRefreshLayout) findViewById(R.id.layout_fresh);
+        concert = (MyConcert) findViewById(R.id.my_concert);
         //为按钮设置监听事件
         bt_previous.setOnClickListener(this);
         bt_play_pause.setOnClickListener(this);
@@ -264,6 +273,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         bt_download.setOnClickListener(this);
         fbt_home.setOnClickListener(this);
         ib_refresh_list.setOnClickListener(this);
+        concert.setOnClickListener(this);
         layout_fresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
@@ -653,6 +663,8 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         }).start();
         sb_song_play_progress.setMax(mediaPlayer.getDuration());
         tv_display_time_total.setText(MathUtil.getDisplayTime(mediaPlayer.getDuration()));
+
+        setConcert();
         return true;
     }
 
@@ -739,13 +751,13 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
        // wxapi.openWXApp();
         //新建对象
         WXMusicObject object = new WXMusicObject();
-        List<SongInfo> list = DataSupport.select("urlMp3").where("song_id=?",index+"").find(SongInfo.class);
-        object.musicUrl = list.get(list.size()-1).getUrlMp3();
+        List<SongInfo> list = DataSupport.select("urlWeb").where("song_id=?",index+"").find(SongInfo.class);
+        object.musicUrl = list.get(list.size()-1).getUrlWeb();
         //新建信息
         WXMediaMessage message = new WXMediaMessage();
         message.mediaObject = object;
         message.title = songList.get(index-1).getName();
-        message.description = "呵呵";
+        message.description = "description";
         //缩略图
         String str = downloadPath+"img/s"+(index>9?index+"":"0"+index)+".jpg";
         Bitmap bitmap = BitmapFactory.decodeFile(str);
@@ -767,7 +779,6 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         }
         //发送
         boolean suc = wxapi.sendReq(req);
-        Log.d("wx", suc+"");
 
     }
 
@@ -816,6 +827,15 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         mediaPlayer.start();
         bt_play_pause.setImageResource(R.drawable.pause);
         vf_ly_bs.setDisplayedChild(1);
+        setConcert();
+    }
+
+    private void setConcert(){
+        //设置唱片图片
+        String str = index>9?index+"":"0"+index;
+        Bitmap bitmap = BitmapFactory.decodeFile(downloadPath+"img/s"+str+".jpg");
+        concert.setSrc(bitmap);
+        concert.setPlaying(true);
     }
 
     @Override
@@ -898,6 +918,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                     bt_play_pause.setImageResource(R.drawable.pause);
                 }
                 break;
+            case R.id.my_concert:
+                mediaPlayer.changP_P();
+                if (!mediaPlayer.isPlaying()){
+                    bt_play_pause.setImageResource(R.drawable.play);
+                }else {
+                    bt_play_pause.setImageResource(R.drawable.pause);
+                }
+                break;
             case R.id.bt_next:
                 mediaPlayer.playNext();
                 break;
@@ -968,6 +996,11 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                 break;
             default:
                 break;
+        }
+        if (mediaPlayer.isPlaying()){
+            concert.setPlaying(true);
+        }else {
+            concert.setPlaying(false);
         }
     }
     //判断是否已经下载

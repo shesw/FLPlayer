@@ -30,12 +30,15 @@ public class TextHandle {
         int l_index = line.indexOf("[l!")+3;
         int b_index = line.indexOf("[b!")+3;
         int p_index = line.indexOf("[p!")+3;
+        int w_index = line.indexOf("[w!")+3;
+
         String name = line.substring(n_index,line.indexOf("]",n_index));
         String urlMp3 = line.substring(m_index,line.indexOf("]",m_index));
         String urlLyc = line.substring(l_index,line.indexOf("]",l_index));
         String urlBgs = line.substring(b_index,line.indexOf("]",b_index));
         String urlImg = line.substring(p_index,line.indexOf("]",p_index));
-        return new String[]{name,urlMp3,urlLyc,urlBgs,urlImg};
+        String urlWeb = line.substring(w_index,line.indexOf("]",w_index));
+        return new String[]{name,urlMp3,urlLyc,urlBgs,urlImg,urlWeb};
     }
 
 

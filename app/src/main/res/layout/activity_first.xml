@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/activity_first"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.compassl.anji.flsts.FirstActivity">
+    tools:context="com.compassl.anji.flsts.activity.FirstActivity">
 
 
     <Button
@@ -15,12 +16,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:onClick="toMusic"/>
+    <Button
+        android:id="@+id/bt_to_xpuzzle"
+        android:textAllCaps="false"
+        android:text="to XPuzzle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="toXPuzzle"/>
 
     <ProgressBar
         android:id="@+id/pb_wait"
         android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
-
 
 </LinearLayout>

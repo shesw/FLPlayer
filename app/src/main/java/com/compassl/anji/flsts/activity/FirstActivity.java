@@ -1,4 +1,4 @@
-package com.compassl.anji.flsts;
+package com.compassl.anji.flsts.activity;
 
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
+
+import com.compassl.anji.flsts.R;
 
 public class FirstActivity extends AppCompatActivity {
 
@@ -93,5 +95,10 @@ public class FirstActivity extends AppCompatActivity {
             stopService(intent);
         }
         Log.d("changeactivity", "first destroy");
+    }
+
+    public void toXPuzzle(View view) {
+        Intent intent = new Intent(FirstActivity.this,XpuzzleMain.class);
+        startActivity(intent);
     }
 }

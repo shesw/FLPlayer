@@ -1,4 +1,4 @@
-package com.compassl.anji.flsts;
+package com.compassl.anji.flsts.bean;
 
 /**
  * Created by Administrator on 2017/10/28.

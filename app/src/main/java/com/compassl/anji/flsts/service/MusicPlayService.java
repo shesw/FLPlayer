@@ -19,8 +19,8 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import com.compassl.anji.flsts.MusicActivity;
-import com.compassl.anji.flsts.Song;
+import com.compassl.anji.flsts.activity.MusicActivity;
+import com.compassl.anji.flsts.bean.Song;
 import com.compassl.anji.flsts.db.SongInfo;
 import com.compassl.anji.flsts.util.InitialTool;
 import com.compassl.anji.flsts.R;
@@ -147,6 +147,10 @@ public class MusicPlayService extends Service {
 
 
     private void changeSong(int i){
+        if (songList.size()<i){
+            songList = InitialTool.initSongChoose(this);
+            SONG_ACCOUNT = songList.size();
+        }
         index = i;
         mediaPlayer.reset();
         if (MODE == MODE_RANDOM) {

@@ -1,4 +1,4 @@
-package com.compassl.anji.flsts;
+package com.compassl.anji.flsts.adapter;
 
 import android.content.Context;
 import android.support.v7.widget.CardView;
@@ -10,6 +10,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.compassl.anji.flsts.R;
+import com.compassl.anji.flsts.bean.Song;
 
 import java.util.ArrayList;
 import java.util.List;

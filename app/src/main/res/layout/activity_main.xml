@@ -22,12 +22,12 @@
             android:id="@+id/dl_choose_song"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-            <android.support.v4.widget.SwipeRefreshLayout
+            <com.compassl.anji.flsts.ui.MySwipeRefreshLayout
                 android:id="@+id/layout_fresh"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
                 <include layout="@layout/fragment_for_playing"/>
-            </android.support.v4.widget.SwipeRefreshLayout>
+            </com.compassl.anji.flsts.ui.MySwipeRefreshLayout>
 
             <include android:layout_gravity="start"
                 android:layout_height="match_parent"

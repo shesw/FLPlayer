@@ -1,11 +1,10 @@
 package com.compassl.anji.flsts.util;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.compassl.anji.flsts.Song;
+import com.compassl.anji.flsts.bean.Song;
 import com.compassl.anji.flsts.db.SongInfo;
 
 import org.litepal.crud.DataSupport;
@@ -84,10 +83,10 @@ public class InitialTool {
                 String str = bufferedReader.readLine();
                 String[] str5 = TextHandle.handleInfo(str);
                 if (list.size()==0){
-                    SongInfo songInfo = new SongInfo(i,str5[0],str5[1],str5[2],str5[3],str5[4]);
+                    SongInfo songInfo = new SongInfo(i,str5[0],str5[1],str5[2],str5[3],str5[4],str5[5]);
                     songInfo.save();
                 }else {
-                    SongInfo songInfo = new SongInfo(str5[0],str5[1],str5[2],str5[3],str5[4]);
+                    SongInfo songInfo = new SongInfo(str5[0],str5[1],str5[2],str5[3],str5[4],str5[5]);
                     songInfo.updateAll("song_id=?",i+"");
                 }
             }

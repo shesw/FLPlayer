@@ -1,4 +1,4 @@
-package com.compassl.anji.flsts;
+package com.compassl.anji.flsts.ui;
 
 import android.content.Context;
 import android.graphics.Rect;
