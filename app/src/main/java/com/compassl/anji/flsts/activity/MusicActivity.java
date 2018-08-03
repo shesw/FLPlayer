@@ -263,7 +263,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         ib_refresh_list = (ImageButton) findViewById(R.id.ib_refresh_songList);
         pb_download = (ProgressBar) findViewById(R.id.pb_download);
         layout_fresh = (SwipeRefreshLayout) findViewById(R.id.layout_fresh);
-        concert = (MyConcert) findViewById(R.id.my_concert);
+        //concert = (MyConcert) findViewById(R.id.my_concert);
         //为按钮设置监听事件
         bt_previous.setOnClickListener(this);
         bt_play_pause.setOnClickListener(this);
@@ -273,7 +273,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         bt_download.setOnClickListener(this);
         fbt_home.setOnClickListener(this);
         ib_refresh_list.setOnClickListener(this);
-        concert.setOnClickListener(this);
+//        concert.setOnClickListener(this);
         layout_fresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
@@ -664,7 +664,7 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         sb_song_play_progress.setMax(mediaPlayer.getDuration());
         tv_display_time_total.setText(MathUtil.getDisplayTime(mediaPlayer.getDuration()));
 
-        setConcert();
+     //   setConcert();
         return true;
     }
 
@@ -827,16 +827,16 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
         mediaPlayer.start();
         bt_play_pause.setImageResource(R.drawable.pause);
         vf_ly_bs.setDisplayedChild(1);
-        setConcert();
+ //       setConcert();
     }
 
-    private void setConcert(){
-        //设置唱片图片
-        String str = index>9?index+"":"0"+index;
-        Bitmap bitmap = BitmapFactory.decodeFile(downloadPath+"img/s"+str+".jpg");
-        concert.setSrc(bitmap);
-        concert.setPlaying(true);
-    }
+//    private void setConcert(){
+//        //设置唱片图片
+//        String str = index>9?index+"":"0"+index;
+//        Bitmap bitmap = BitmapFactory.decodeFile(downloadPath+"img/s"+str+".jpg");
+//        concert.setSrc(bitmap);
+//        concert.setPlaying(true);
+//    }
 
     @Override
     protected void onDestroy() {
@@ -918,14 +918,14 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
                     bt_play_pause.setImageResource(R.drawable.pause);
                 }
                 break;
-            case R.id.my_concert:
-                mediaPlayer.changP_P();
-                if (!mediaPlayer.isPlaying()){
-                    bt_play_pause.setImageResource(R.drawable.play);
-                }else {
-                    bt_play_pause.setImageResource(R.drawable.pause);
-                }
-                break;
+//            case R.id.my_concert:
+//                mediaPlayer.changP_P();
+//                if (!mediaPlayer.isPlaying()){
+//                    bt_play_pause.setImageResource(R.drawable.play);
+//                }else {
+//                    bt_play_pause.setImageResource(R.drawable.pause);
+//                }
+//                break;
             case R.id.bt_next:
                 mediaPlayer.playNext();
                 break;
@@ -997,11 +997,11 @@ public class MusicActivity extends AppCompatActivity implements View.OnClickList
             default:
                 break;
         }
-        if (mediaPlayer.isPlaying()){
-            concert.setPlaying(true);
-        }else {
-            concert.setPlaying(false);
-        }
+//        if (mediaPlayer.isPlaying()){
+//            concert.setPlaying(true);
+//        }else {
+//            concert.setPlaying(false);
+//        }
     }
     //判断是否已经下载
     private boolean[] isDownloadeded(int id){
